@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-11-21T16:29:32.050Z"
+stopped_at: Completed 01-11-PLAN.md
+last_updated: "2026-11-21T16:30:06.074Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: bcc093ba77cf5a7a840f748bd664524518c6769b
+state_head: d25e09b94e0a1c9c2468cf5ee3cdfe90fe9db083
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 |------|----------|-------|-------|
 | Phase 01 P01 | 10min | 2 tasks | 11 files |
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
+| Phase 01 P11 | 6min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,7 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-01]: Plain Fastify logger kept until plan 01-04 PII-free harness
 - [Phase 01]: [01-04]: Fastify err serializer cast with 'as never' because typings require message/stack; allow-list omits them
 - [Phase 01]: [01-04]: text/plain bodies return 400 (default parser + schema), 415 only for unparsed types like application/xml
+- [Phase 01]: [01-11]: Integration helpers use fetch with Basic auth for WebDAV; assertLoopback never echoes the offending URL (may carry credentials)
 
 ### Pending Todos
 
@@ -96,6 +98,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:29:32.030Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-11-21T16:30:06.056Z
+Stopped at: Completed 01-11-PLAN.md
 Resume file: None
