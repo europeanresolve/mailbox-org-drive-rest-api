@@ -16,9 +16,9 @@ key-files:
   modified: []
 key-decisions:
   - "Dry-run hacdias container needs --tmpfs /data (the image has no /data directory, so the root answers 404 without it)"
-requirements-completed: []
-status: checkpoint
-checkpoint: "Task 3 (human-action): OX_WEBDAV_URL / OX_WEBDAV_USER / OX_WEBDAV_PASSWORD are not in the environment"
+requirements-completed: [STOR-01, DEV-04]
+anon_path: /Users/serhiy/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon
+status: complete
 duration: ~1h
 completed: 2026-11-21
 commits: 0
@@ -30,9 +30,9 @@ actuals:
   commits: 0
 ---
 
-# Phase 1 Plan 02: OX WebDAV spike Summary (stopped at human-action checkpoint)
+# Phase 1 Plan 02: OX WebDAV spike Summary
 
-**A dependency-free probe script (P-01..P-19, U-01..U-10) with root guard, anonymiser and scrub is built and proven on a local hacdias/webdav container. No request has gone to mailbox.org: Task 3 needs the user's credentials and OX web UI checks, so the plan stops here and no OX result exists yet.**
+**A dependency-free probe script (P-01..P-19, U-01..U-10) with root guard, anonymiser and scrub was built, proven on a local hacdias/webdav container, and then run once by the user against their mailbox.org account. The reviewed, anonymised record (224 files) lives outside the checkout at the `anon_path` below, ready for plan 01-10.**
 
 ## Status
 
@@ -40,11 +40,47 @@ actuals:
 |------|------|--------|
 | 1 | Probe script end to end, dry run on local hacdias (tracer) | done, verified |
 | 2 | Full catalogue P-03..P-19 and UI checklist U-01..U-10 | done, verified on local hacdias |
-| 3 | Run against mailbox.org and answer the UI checklist (`checkpoint:human-action`, `gate="blocking"`) | **NOT DONE: awaiting the user** |
+| 3 | Run against mailbox.org and answer the UI checklist (`checkpoint:human-action`, `gate="blocking"`) | **done: `anon ok` passed (fourth run)** |
 
-`OX_WEBDAV_*` were absent from the environment (`env | grep -c OX_WEBDAV` printed 0), so the checkpoint was reached without any mailbox.org traffic. The dry-run results below describe hacdias/webdav, never OX. None of them are OX observations and none may go into the compatibility matrix as such.
+**anon_path (for plan 01-10):** `/Users/serhiy/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon`
 
-STATE.md and ROADMAP.md were deliberately not advanced: the plan is not complete. `anon_path` for plan 01-10 does not exist yet: **TBD after the user's run**.
+Task 3 outcome (fourth run): the user redacted the pasted OX UI link in `ui-answers.json` U-03 (now `<OX UI URL redacted>`) and deleted `OUT_DIR/raw/` (only `anon/` remains under `ox-spike/2026-11-21/`). The plan's `anon ok` command then printed `anon ok` (exit 0): `summary.json` and `ui-answers.json` are non-empty and no file matches `mailbox\.org|Userstore/[^L%]`. Extra checks by the executor: `summary.json` has all of P-01..P-19 plus GUARD and CLEANUP rows (227 rows); no `@`, `Authorization`, or non-`open-xchange.com` host in `anon/`; every date is the synthetic `2026-01-01`.
+
+Cleanup confirmations: `raw/` deletion is verified on disk. The user's `done` message did not itemise probe-folder deletion, trash emptying, app-password deletion and `unset OX_WEBDAV_*`, and the executor cannot check those. **The user should confirm them** (the app password in particular unlocks the whole Drive). The CLEANUP rows in `summary.json` show the script's own deletes (204/404). `git status --porcelain tmp` prints nothing: nothing from `tmp/` is tracked.
+
+### Observed OX results (live run; no URLs, no credentials)
+
+| Probe | OX result |
+|-------|-----------|
+| P-01 | OPTIONS 200 |
+| P-02 | PUT 201; four Depth 0 PROPFINDs 207 |
+| P-03 | 8 special-name PUTs 201; Depth 1 listing 207, 10 responses, self-entry first |
+| P-04 | MKCOL + 3 PUTs 201; Depth infinity 207; Depth omitted 207 |
+| P-05 | Content-Length PUT 201; chunked PUT 201 |
+| P-06 | ETag stable across PROPFIND/HEAD/GET; **changed after an identical PUT**; changed after each write (also same-second); unchanged by a sibling edit; **changed by MOVE rename** |
+| P-07 | `If-None-Match` on GET: quoted 304, weak 304, unquoted 200 |
+| P-08 | **`If-Match` is honoured: a bogus `If-Match` gives 412 and `If-None-Match: *` on an existing file gives 412**; content unchanged |
+| P-09 | LOCK 200; PUT without token 423; PUT with token 201; UNLOCK 204 |
+| P-10 | rename 201; Overwrite F 412; Overwrite T 204 (destination has source content); repeat of a successful move 404; onto itself 403; missing source 404; missing parent 409 |
+| P-11 | MKCOL new 201, existing 405, missing parent 409, `Last, First` 201; PROPFIND without trailing slash 207 |
+| P-12 | DELETE 204 / missing 404 / name reuse 201; non-empty folder DELETE 204, then PROPFIND 404 |
+| P-13 | GET on a folder **415**, GET missing 404, HEAD 200 |
+| P-14 | 15 of 16 name PUTs 201, **the backslash name gives 500**; listing 40 responses |
+| P-15 | `Last%2C%20First` and `Last,%20First` 207; the other three forms 404 |
+| P-16 | 1 MB and 10 MB PUT 201; quota PROPFIND answered 207 with empty values |
+| P-17 | temp + MOVE Overwrite T 204, content replaced, ETag changed; direct PUT ETag also changed |
+| P-18 | 38 PROPFINDs, all 207, no 429/503 |
+| P-19 | `webdav@5.11.0`: putFileContents, stat, getDirectoryContents, moveFile, deleteFile all ok |
+
+UI answers (U-01..U-10) are in `ui-answers.json`; U-03 is redacted. Highlights: deleted items appear in the trash (U-05, U-06), the UI shows no versions for renamed or moved files (U-10), the UI folder name uses the comma form (U-09), and the 10 MB upload did not visibly consume quota (U-07).
+
+### Notes for plan 01-10 from the review
+
+- OX ETags have the form `<number>-<number>-<number>-<number>`. The leading number is constant across the run and looks account or folder derived, and the last number looks like a per-write token. Plan 01-10 fixtures must use **synthetic ETags**, never these strings. The leading number is not a host, user or folder name, so the scrub did not flag it and the user's review passed it.
+- The anonymiser maps the user folder to `Userstore/Last,%20First/`. That is a synthetic segment, not the real name.
+- The P-14 backslash 500 and the P-13 415 are real OX behaviours to put in the matrix. Quota (P-16) PROPFIND returned 207 with empty `quota-used-bytes` and `quota-available-bytes`, so quota cannot be read through PROPFIND on this endpoint.
+- OX responses carry `x-ratelimit-limit: 150, 150;w=1, 3000;w=60, 20000;w=3600` (about 150 per second, 3000 per minute, 20000 per hour) and `x-ratelimit-remaining`. Use these for the adapter's rate defaults (plan 01-12); P-18 never reached them.
+- Because the hacdias dry run differs from OX (hacdias ignores `If-Match` and answers 403/404 where OX answers 412/409), the dry-run table below must not be used for matrix rows.
 
 ## RED evidence (Task 1)
 
@@ -77,7 +113,7 @@ GREEN: the helpers were implemented until `node tmp/spike/ox-probe.mjs --self-te
 - Every date in `anon/` is `2026-01-01` (synthetic epoch); the probe folder segment is `probe-2026-01-01`.
 - `git check-ignore -q` passes for both scripts; `git status --porcelain tmp` prints nothing (never committed, D-07).
 
-### Per-probe status table (dry run on hacdias, NOT OX; no URLs, no credentials)
+### Dry-run status table (hacdias, NOT OX, superseded by the OX table above; no URLs, no credentials)
 
 | Probe | Result on hacdias | Rows |
 |-------|-------------------|------|
@@ -103,7 +139,7 @@ GREEN: the helpers were implemented until `node tmp/spike/ox-probe.mjs --self-te
 
 These hacdias behaviours match the research notes (MOVE failures 403, `If-Match` ignored, recursive folder DELETE, `Depth: infinity` accepted).
 
-## Checkpoint: what the user must do
+## Checkpoint: what the user had to do (historical, completed in the fourth run)
 
 This is `checkpoint:human-action` (Task 3, `gate="blocking"`). The user must supply their mailbox.org login and an application password, and answer the OX web UI checklist. Follow the plan's steps 1-8. The checkout holding `tmp/spike/` is:
 
@@ -119,7 +155,7 @@ Short version:
 7. Review every file in `OUT_DIR/anon/`, delete anything personal, then delete `OUT_DIR/raw/`.
 8. Resume with `done <absolute path of anon/>`. The executor then runs the plan's `anon ok` check (summary.json and ui-answers.json non-empty, no `mailbox.org` host or foreign `Userstore/` segment) and records the path here for plan 01-10.
 
-## Continuation check (2026-11-21, second run): still blocked
+## History: second run (still blocked, superseded)
 
 `OX_WEBDAV_URL`, `OX_WEBDAV_USER` and `OX_WEBDAV_PASSWORD` are still not in the environment, so Task 3 was not run and no request went to mailbox.org. No OX result exists. STOR-01 and DEV-04 stay open; STATE.md and ROADMAP.md are unchanged.
 
@@ -138,11 +174,11 @@ Offline state re-verified, nothing new built:
 
 Plans 01-10 and 01-12 stay blocked on `anon_path` (still TBD).
 
-## Continuation check (2026-11-21, third run): `anon ok` FAILED, plan stays open
+## History: third run (`anon ok` failed on one pasted URL, fixed by the user in the fourth run)
 
 Resume signal received: `done` with the anon/ path `/Users/serhiy/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon` (224 files; `summary.json` has P-01..P-19 plus GUARD and CLEANUP rows; `ui-answers.json` has U-01..U-10). The live probe was not re-run.
 
-The plan's `anon ok` command printed `anon/ui-answers.json` and no `anon ok`: the free-text answer to U-03 contains a pasted `https://app.mailbox.org/appsuite/...` link with the account's numeric folder and file ids. Every other file passes: all dates are the synthetic `2026-01-01`, the folder segment is `probe-2026-01-01` under `Userstore/Last,%20First/`, no `Authorization`, password, `@` or other host (only the `open-xchange.com` lock namespace), and quota PROPFIND answers are empty (404).
+The plan's `anon ok` command printed `anon/ui-answers.json` and no `anon ok`: the free-text answer to U-03 contains a pasted `https://app.mailbox.org/appsuite/...` link with the account's numeric folder and file ids. Every other file passes: all dates are the synthetic `2026-01-01`, the folder segment is `probe-2026-01-01` under `Userstore/Last,%20First/`, no `Authorization`, password, `@` or other host (only the `open-xchange.com` lock namespace), and quota PROPFIND answers are empty.
 
 The fix needs a write outside the checkout, so the executor did not edit the user's file. Redact that one URL in `ui-answers.json` (for example replace it with `<OX UI URL redacted>`), then resume with the same path. STOR-01 and DEV-04 stay open; STATE.md and ROADMAP.md are unchanged. `anon_path` stays TBD until the check passes.
 

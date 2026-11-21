@@ -20,11 +20,11 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **DEV-01**: Developer can start a local stack (Docker Compose: MongoDB + local WebDAV server) with one command
 - [x] **DEV-02**: Developer can run unit tests and integration tests against the local stack; no test touches a real Drive
 - [x] **DEV-03**: Every push to `main` runs CI: lint/format, typecheck, unit and integration tests, container image build
-- [ ] **DEV-04**: Planning artefacts, fixtures and examples contain only synthetic data
+- [x] **DEV-04**: Planning artefacts, fixtures and examples contain only synthetic data
 
 ### Storage
 
-- [ ] **STOR-01**: Team has a written OX App Suite / mailbox.org WebDAV compatibility matrix (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning and trash on overwrite/delete, path encoding of names like `Last, First`) with synthetic fixtures, produced by a spike
+- [x] **STOR-01**: Team has a written OX App Suite / mailbox.org WebDAV compatibility matrix (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning and trash on overwrite/delete, path encoding of names like `Last, First`) with synthetic fixtures, produced by a spike
 - [x] **STOR-02**: Deployer can allow-list mounts (named Drive folder plus `read` or `read-write` mode); any path outside a mount, or a write to a `read` mount, is rejected
 - [x] **STOR-03**: Path traversal and encoding tricks (`..`, encoded separators, Unicode normalisation) cannot escape a mount, verified by a traversal corpus test
 - [x] **STOR-04**: Storage access goes through a `StorageAdapter` interface (list, stat with ETag/last-modified/size, read, write, create folder, move, delete) with a WebDAV and an in-memory implementation passing one shared contract suite
@@ -143,8 +143,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEV-01 | Phase 1 | Complete |
 | DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 1 | Complete |
-| DEV-04 | Phase 1 | Pending |
-| STOR-01 | Phase 1 | Pending |
+| DEV-04 | Phase 1 | Complete |
+| STOR-01 | Phase 1 | Complete |
 | STOR-02 | Phase 1 | Complete |
 | STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Complete |

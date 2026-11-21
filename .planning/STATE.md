@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-05-PLAN.md
-last_updated: "2026-11-21T17:15:44.558Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-11-21T21:51:09.281Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 9667d3b5fbdee9483cd6bcb3cefa66560fbd63c4
+state_head: 989505df0654d5547ed3f7e305beddc7b235550d
 progress:
   total_phases: 4
   completed_phases: 0
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P08 | 9min | 3 tasks | 4 files |
 | Phase 01 P09 | 5min | 3 tasks | 10 files |
 | Phase 01 P05 | 2h | 3 tasks | 3 files |
+| Phase 01 P02 | 1h | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,7 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-08]: Retried MOVE/DELETE verify with a raw stat inside the held slot, never through run(), so concurrency 1 cannot deadlock
 - [Phase 01]: [01-09]: Every DriveHealth state change logs at warn once; SIGTERM/SIGINT handlers live in the main guard so repeated start() calls leave no listeners; a failed startup closes the Mongo client
 - [Phase 01]: 01-05: Renovate App install recorded pending (owner browser action); CI, GHCR publish and anonymous pull verified on main
+- [Phase 01]: [01-02]: OX spike anon/ record lives outside the repo at ~/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon; OX honours If-Match (412), unlike hacdias, and ETags must be synthesised in fixtures
 
 ### Pending Todos
 
@@ -99,7 +101,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: OX App Suite WebDAV behaviour (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning/trash, `Last, First` path encoding) is unverified; the spike (STOR-01) may change the mirror (Phase 3) and cache (Phase 4) designs
+- [Phase 1]: OX spike run done (01-02); raw observations are in the anon/ record. Plan 01-10 must turn them into the matrix and synthetic fixtures (STOR-01 doc and fixtures still pending there); findings may change the mirror (Phase 3) and cache (Phase 4) designs
 - [Phase 1]: Ask mailbox.org support about WebDAV request limits before production use; keep low concurrency and backoff meanwhile
 - [Phase 2]: Open decisions for discuss-phase: config-only collections, API keys in config behind `KeyStore`, hard vs soft delete (COLL-06), pnpm vs npm
 - [Phase 3]: Mirror workbook layout (one per collection recommended) and atomic-write mechanism depend on the spike; verify exceljs determinism
@@ -115,6 +117,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T17:15:44.540Z
-Stopped at: Completed 01-05-PLAN.md
+Last session: 2026-11-21T21:50:55.271Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
