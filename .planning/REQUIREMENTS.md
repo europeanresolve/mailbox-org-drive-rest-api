@@ -135,12 +135,62 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| FND-01 | Phase 1 | Pending |
+| FND-02 | Phase 1 | Pending |
+| FND-03 | Phase 1 | Pending |
+| FND-04 | Phase 2 | Pending |
+| FND-05 | Phase 3 | Pending |
+| DEV-01 | Phase 1 | Pending |
+| DEV-02 | Phase 1 | Pending |
+| DEV-03 | Phase 1 | Pending |
+| DEV-04 | Phase 1 | Pending |
+| STOR-01 | Phase 1 | Pending |
+| STOR-02 | Phase 1 | Pending |
+| STOR-03 | Phase 1 | Pending |
+| STOR-04 | Phase 1 | Pending |
+| STOR-05 | Phase 1 | Pending |
+| COLL-01 | Phase 2 | Pending |
+| COLL-02 | Phase 2 | Pending |
+| COLL-03 | Phase 2 | Pending |
+| COLL-04 | Phase 2 | Pending |
+| COLL-05 | Phase 2 | Pending |
+| COLL-06 | Phase 2 | Pending |
+| COLL-07 | Phase 2 | Pending |
+| COLL-08 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | Pending |
+| SEC-02 | Phase 2 | Pending |
+| SEC-03 | Phase 2 | Pending |
+| SEC-04 | Phase 2 | Pending |
+| SEC-05 | Phase 2 | Pending |
+| SEC-06 | Phase 2 | Pending |
+| SEC-07 | Phase 2 | Pending |
+| SEC-08 | Phase 2 | Pending |
+| SEC-09 | Phase 2 | Pending |
+| MIRR-01 | Phase 3 | Pending |
+| MIRR-02 | Phase 3 | Pending |
+| MIRR-03 | Phase 3 | Pending |
+| MIRR-04 | Phase 3 | Pending |
+| MIRR-05 | Phase 3 | Pending |
+| MIRR-06 | Phase 3 | Pending |
+| MIRR-07 | Phase 3 | Pending |
+| MIRR-08 | Phase 3 | Pending |
+| READ-01 | Phase 4 | Pending |
+| READ-02 | Phase 4 | Pending |
+| READ-03 | Phase 4 | Pending |
+| READ-04 | Phase 4 | Pending |
+| READ-05 | Phase 4 | Pending |
+| READ-06 | Phase 4 | Pending |
+| READ-07 | Phase 4 | Pending |
+| READ-08 | Phase 4 | Pending |
+| READ-09 | Phase 4 | Pending |
+| READ-10 | Phase 4 | Pending |
+| READ-11 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 0
-- Unmapped: 48 ⚠️
+- v1 requirements: 50 total
+- Mapped to phases: 50
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-21*
-*Last updated: 2026-11-21 after initial definition*
+*Last updated: 2026-11-21 after roadmap creation (traceability filled; coverage corrected from 48 to 50)*
