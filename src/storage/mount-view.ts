@@ -1,4 +1,5 @@
 import type { ReadOptions, StatEntry, StorageAdapter } from "./adapter.ts";
+import { StorageError } from "./errors.ts";
 import type { Mounts } from "./mounts.ts";
 
 export type ReadableMount = {
@@ -24,6 +25,9 @@ export type WritableMount = Omit<ReadableMount, "mode"> & {
 /**
  * One class backs both mount types. Every relative path goes through
  * `mounts.resolve` before any adapter call, so path errors surface first.
+ * Methods are async so every failure is a rejection, never a sync throw.
+ * Write methods check the mode first: a read mount cannot reach the adapter
+ * even when the type-level guard is bypassed with a cast (STOR-02, T-01-20).
  */
 export class MountView {
 	readonly name: string;
@@ -38,31 +42,38 @@ export class MountView {
 		this.mode = mounts.get(name).mode;
 	}
 
-	list(rel: string): Promise<StatEntry[]> {
+	#assertWritable(op: string): void {
+		if (this.mode === "read") throw new StorageError("read-only-mount", op);
+	}
+
+	async list(rel: string): Promise<StatEntry[]> {
 		return this.#adapter.list(this.#mounts.resolve(this.name, rel));
 	}
 
-	stat(rel: string): Promise<StatEntry> {
+	async stat(rel: string): Promise<StatEntry> {
 		return this.#adapter.stat(this.#mounts.resolve(this.name, rel));
 	}
 
-	read(rel: string, opts?: ReadOptions): Promise<Buffer> {
+	async read(rel: string, opts?: ReadOptions): Promise<Buffer> {
 		return this.#adapter.read(this.#mounts.resolve(this.name, rel), opts);
 	}
 
-	write(rel: string, body: Buffer): Promise<StatEntry> {
+	async write(rel: string, body: Buffer): Promise<StatEntry> {
+		this.#assertWritable("write");
 		return this.#adapter.write(this.#mounts.resolve(this.name, rel), body);
 	}
 
-	mkdir(rel: string): Promise<void> {
+	async mkdir(rel: string): Promise<void> {
+		this.#assertWritable("mkdir");
 		return this.#adapter.mkdir(this.#mounts.resolve(this.name, rel));
 	}
 
-	move(
+	async move(
 		fromRel: string,
 		toRel: string,
 		opts: { overwrite: boolean },
 	): Promise<void> {
+		this.#assertWritable("move");
 		return this.#adapter.move(
 			this.#mounts.resolve(this.name, fromRel),
 			this.#mounts.resolve(this.name, toRel),
@@ -70,7 +81,8 @@ export class MountView {
 		);
 	}
 
-	delete(rel: string): Promise<void> {
+	async delete(rel: string): Promise<void> {
+		this.#assertWritable("delete");
 		return this.#adapter.delete(this.#mounts.resolve(this.name, rel));
 	}
 }
