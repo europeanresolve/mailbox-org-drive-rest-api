@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-11-21T16:30:19.116Z"
+stopped_at: Completed 01-07-PLAN.md
+last_updated: "2026-11-21T16:40:19.229Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 2ee7f2efaf36e73d4a64fdf8ed689dd8bdc64b29
+state_head: c3a3ac588aa8b3c920c5c365409434dd60693e95
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 4
+  completed_plans: 6
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 5 of 12
+Plan: 6 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
 | Phase 01 P11 | 6min | 2 tasks | 7 files |
 | Phase 01 P03 | 4min | 3 tasks | 5 files |
+| Phase 01 P07 | 5min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-11]: Integration helpers use fetch with Basic auth for WebDAV; assertLoopback never echoes the offending URL (may carry credentials)
 - [Phase 01]: [01-03]: ResolvedPath implements util.inspect.custom so logging never prints path segments (D-19)
 - [Phase 01]: [01-03]: Mount issue order is per-mount (name, root) in config order, then one OVERLAP per pair; AT_ROOT means zero segments after the leading slash
+- [Phase 01]: [01-07]: MountView methods are async and write methods check mode before resolving, so a read mount rejects with read-only-mount and zero adapter calls
+- [Phase 01]: [01-07]: Contract suite asserts StorageError.kind only; read returns a Buffer capped by maxBytes (25 MiB default), mkdir is strict
 
 ### Pending Todos
 
@@ -101,6 +104,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:30:19.097Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-11-21T16:40:19.211Z
+Stopped at: Completed 01-07-PLAN.md
 Resume file: None

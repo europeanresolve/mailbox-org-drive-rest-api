@@ -25,7 +25,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 ### Storage
 
 - [ ] **STOR-01**: Team has a written OX App Suite / mailbox.org WebDAV compatibility matrix (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning and trash on overwrite/delete, path encoding of names like `Last, First`) with synthetic fixtures, produced by a spike
-- [ ] **STOR-02**: Deployer can allow-list mounts (named Drive folder plus `read` or `read-write` mode); any path outside a mount, or a write to a `read` mount, is rejected
+- [x] **STOR-02**: Deployer can allow-list mounts (named Drive folder plus `read` or `read-write` mode); any path outside a mount, or a write to a `read` mount, is rejected
 - [x] **STOR-03**: Path traversal and encoding tricks (`..`, encoded separators, Unicode normalisation) cannot escape a mount, verified by a traversal corpus test
 - [ ] **STOR-04**: Storage access goes through a `StorageAdapter` interface (list, stat with ETag/last-modified/size, read, write, create folder, move, delete) with a WebDAV and an in-memory implementation passing one shared contract suite
 - [ ] **STOR-05**: The WebDAV adapter retries transient failures (429/503/network) with exponential backoff, never retries 401/403, caps concurrency, and never issues deep PROPFIND traversals
@@ -145,7 +145,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEV-03 | Phase 1 | Pending |
 | DEV-04 | Phase 1 | Pending |
 | STOR-01 | Phase 1 | Pending |
-| STOR-02 | Phase 1 | Pending |
+| STOR-02 | Phase 1 | Complete |
 | STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Pending |
 | STOR-05 | Phase 1 | Pending |
