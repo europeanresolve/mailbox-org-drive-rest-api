@@ -88,18 +88,61 @@ export class Mounts {
 	}
 }
 
+function isPrefix(a: readonly string[], b: readonly string[]): boolean {
+	return a.length <= b.length && a.every((segment, i) => b[i] === segment);
+}
+
+// Case-sensitive on NFC segments: flagged assumption until the OX spike
+// shows how the Drive compares names (P-14, U-09); plan 01-12 revisits it.
+function overlaps(a: readonly string[], b: readonly string[]): boolean {
+	return isPrefix(a, b) || isPrefix(b, a);
+}
+
 export function buildMounts(
 	defs: Record<string, MountDef>,
 ): { ok: true; mounts: Mounts } | { ok: false; issues: MountIssue[] } {
 	const issues: MountIssue[] = [];
 	const entries = new Map<string, MountEntry>();
 	for (const [name, def] of Object.entries(defs)) {
+		const at = `/mounts/${name}`;
 		if (!NAME_RULE.test(name)) {
-			issues.push({ code: "mount.INVALID_NAME", at: `/mounts/${name}` });
+			issues.push({ code: "mount.INVALID_NAME", at });
 			continue;
 		}
-		const root = new ResolvedPath(TOKEN, name, parseRootPath(def.path));
-		entries.set(name, { name, mode: def.mode, root });
+		let segments: string[];
+		try {
+			segments = parseRootPath(def.path);
+		} catch (error) {
+			if (!(error instanceof StorageError)) throw error;
+			// Zero segments after the leading slash means the Drive root itself.
+			const code = /^\/\/?$/.test(def.path)
+				? "mount.AT_ROOT"
+				: "mount.INVALID_PATH";
+			issues.push({ code, at });
+			continue;
+		}
+		entries.set(name, {
+			name,
+			mode: def.mode,
+			root: new ResolvedPath(TOKEN, name, segments),
+		});
+	}
+	// Each pair once (i < j, config order); an overlap needs a read-write side.
+	const list = [...entries.values()];
+	for (let i = 0; i < list.length; i++) {
+		for (let j = i + 1; j < list.length; j++) {
+			const a = list[i] as MountEntry;
+			const b = list[j] as MountEntry;
+			if (
+				(a.mode === "read-write" || b.mode === "read-write") &&
+				overlaps(a.root.segments, b.root.segments)
+			) {
+				issues.push({
+					code: "mount.OVERLAP",
+					at: `/mounts/${a.name} /mounts/${b.name}`,
+				});
+			}
+		}
 	}
 	if (issues.length > 0) return { ok: false, issues };
 	return { ok: true, mounts: new Mounts(entries) };
