@@ -363,7 +363,13 @@ export class WebDavAdapter implements StorageAdapter {
 			if (meta.size > max) throw fail("too-large");
 			const raw = await this.#call(this.#dataMs, (signal) =>
 				this.#client.getFileContents(target, { format: "binary", signal }),
-			);
+			).catch((error: unknown) => {
+				// OX answers GET on a folder with 415 (C-3); a race past the stat above.
+				if (error instanceof Failure && error.status === 415) {
+					throw fail("conflict", 415);
+				}
+				throw error;
+			});
 			const body = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
 			// The listed size can lie; check what actually arrived.
 			if (body.length > max) throw fail("too-large");
