@@ -101,7 +101,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: OX spike run done (01-02); raw observations are in the anon/ record. Plan 01-10 must turn them into the matrix and synthetic fixtures (STOR-01 doc and fixtures still pending there); findings may change the mirror (Phase 3) and cache (Phase 4) designs
+- [Phase 1]: OX behaviour is documented in docs/ox-webdav-compatibility.md; its "Consequences" section lists the adapter changes C-1..C-3 that plan 01-12 applies, the ETag/validator input for Phase 4 and the MOVE-vs-PUT input for the Phase 3 mirror
 - [Phase 1]: Ask mailbox.org support about WebDAV request limits before production use; keep low concurrency and backoff meanwhile
 - [Phase 2]: Open decisions for discuss-phase: config-only collections, API keys in config behind `KeyStore`, hard vs soft delete (COLL-06), pnpm vs npm
 - [Phase 3]: Mirror workbook layout (one per collection recommended) and atomic-write mechanism depend on the spike; verify exceljs determinism

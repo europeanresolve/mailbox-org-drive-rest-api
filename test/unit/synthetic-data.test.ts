@@ -16,7 +16,7 @@ const samples: { rule: string; path: string; text: string }[] = [
 	{
 		rule: "ox-host",
 		path: FIXTURE,
-		text: `<D:href>${["https", "//", "files.", "provider.", "net"].join("")}/x</D:href>`,
+		text: `<D:href>${["https:", "//", "files.", "provider.", "net"].join("")}/x</D:href>`,
 	},
 	{
 		rule: "ox-date",
@@ -41,6 +41,36 @@ describe("findResidue self-check", () => {
 			expect(findResidue(sample.path, sample.text)).toContain(sample.rule);
 		});
 	}
+});
+
+describe("findResidue accepts synthetic data", () => {
+	it("passes reserved e-mail domains", () => {
+		for (const domain of ["example.invalid", "example.org", "mail.test"]) {
+			expect(findResidue("README.md", `user${AT}${domain}`)).toEqual([]);
+		}
+	});
+
+	it("passes a synthetic OX response", () => {
+		const text = [
+			'<D:multistatus xmlns:D="DAV:" xmlns:b="http://www.example.invalid/ns">',
+			"<D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/p02.txt</D:href>",
+			'<D:getlastmodified b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:09:59 GMT</D:getlastmodified>',
+			"<D:displayname>p02.txt</D:displayname>",
+			"<D:quota-used-bytes>1000</D:quota-used-bytes>",
+			"<D:quota-available-bytes />",
+			"</D:multistatus>",
+		].join("\n");
+		expect(findResidue(FIXTURE, text)).toEqual([]);
+	});
+
+	it("flags account headers and a foreign Userstore folder", () => {
+		const header = ["Set", "Cookie"].join("-");
+		expect(findResidue(FIXTURE, `${header}: a=b`)).toContain("ox-auth-header");
+		const folder = ["Jane", "Doe"].join("%20");
+		expect(findResidue(FIXTURE, `/Userstore/${folder}/x`)).toContain(
+			"ox-userstore",
+		);
+	});
 });
 
 describe("tracked files", () => {
