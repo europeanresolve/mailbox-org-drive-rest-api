@@ -119,7 +119,8 @@ describe("OX replay: Depth 1 listing with special names", () => {
 	it("C-2: list keeps the NFC and NFD names OX lists as two entries", async () => {
 		const { adapter, path } = await replay("p03-propfind-depth1-names.xml");
 		const names = (await adapter.list(path(""))).map((e) => e.name);
-		expect(names.includes("Mu\u0308ller.txt")).toBe(false);
+		// P-03: OX lists both spellings; list() returns them as listed, unfolded.
+		expect(names.includes("Mu\u0308ller.txt")).toBe(true);
 		expect(names.includes("M\u00fcller.txt")).toBe(true);
 	});
 });

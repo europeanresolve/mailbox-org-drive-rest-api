@@ -484,7 +484,7 @@ describe("WebDavAdapter OX consequences", () => {
 		const error = await errorOf(
 			adapter.move(path("missing"), path("to"), { overwrite: false }),
 		);
-		expect((error as StorageError).kind).toBe("conflict");
+		expect((error as StorageError).kind).toBe("not-found");
 		expect(server.requests.map((r) => r.method)).toEqual(["MOVE"]);
 	});
 
@@ -493,6 +493,6 @@ describe("WebDavAdapter OX consequences", () => {
 		await adapter.stat(path("Mu\u0308ller.txt"));
 		// OX keeps NFC and NFD as two files (P-03); the fold in parseRelativePath
 		// means only the NFC one can be addressed. Documented, not changed.
-		expect(server.requests[0]?.path).toBe("/m/Mu%CC%88ller.txt");
+		expect(server.requests[0]?.path).toBe("/m/M%C3%BCller.txt");
 	});
 });

@@ -92,8 +92,10 @@ function isPrefix(a: readonly string[], b: readonly string[]): boolean {
 	return a.length <= b.length && a.every((segment, i) => b[i] === segment);
 }
 
-// Case-sensitive on NFC segments: flagged assumption until the OX spike
-// shows how the Drive compares names (P-14, U-09); plan 01-12 revisits it.
+// Case-sensitive on NFC segments. OX keeps NFC and NFD names as two files
+// (P-03), but the fold stays (C-2): it only makes overlap stricter, so two
+// roots that differ only in normalisation are rejected. Case sensitivity on OX
+// is still [ASSUMED] (P-14).
 function overlaps(a: readonly string[], b: readonly string[]): boolean {
 	return isPrefix(a, b) || isPrefix(b, a);
 }
