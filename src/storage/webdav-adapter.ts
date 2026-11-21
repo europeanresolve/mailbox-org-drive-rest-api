@@ -168,7 +168,14 @@ function classify(raw: unknown, signal: AbortSignal): Failure {
 
 function toEntry(file: FileStat, name: string): StatEntry {
 	const isDir = file.type === "directory";
-	const modified = new Date(file.lastmod);
+	// OX tags getlastmodified with a b:dt attribute, so the client may hand back
+	// { text, "@dt" } instead of a string (C-1).
+	const lastmod: unknown = file.lastmod;
+	const modified = new Date(
+		typeof lastmod === "object" && lastmod !== null && "text" in lastmod
+			? String(lastmod.text)
+			: (lastmod as string),
+	);
 	return {
 		name,
 		kind: isDir ? "dir" : "file",

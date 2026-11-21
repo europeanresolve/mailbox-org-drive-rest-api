@@ -68,18 +68,7 @@ describe("OX replay: Depth 0 PROPFIND on a file", () => {
 			// OX sends the ETag unquoted; the client hands the string back as is.
 			etag: textOf(xml, "getetag").replace(/^"|"$/g, ""),
 		});
-		// Known divergence C-1 (docs/ox-webdav-compatibility.md): OX tags
-		// getlastmodified with a b:dt attribute, so the client returns
-		// { text, "@dt" } instead of a string and toEntry() maps it to null.
-		expect(entry.lastModified).toBeNull();
-	});
-
-	// Documents the value plan 01-12 must produce. it.fails turns red when the
-	// adapter is fixed, which is the cue to delete the null assertion above.
-	it.fails("stat parses lastModified from getlastmodified (C-1)", async () => {
-		const { adapter, path } = await replay("p02-propfind-depth0-file.xml");
-		const xml = fixture("p02-propfind-depth0-file.xml");
-		const entry = await adapter.stat(path("p02.txt"));
+		// C-1: OX tags getlastmodified with b:dt; the adapter reads the text.
 		expect(entry.lastModified).toEqual(
 			new Date(textOf(xml, "getlastmodified")),
 		);
