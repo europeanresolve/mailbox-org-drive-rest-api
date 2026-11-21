@@ -18,6 +18,10 @@ export type WebDavAdapterOptions = {
 		maxRetryTime?: number;
 	};
 	timeouts?: { metaMs?: number; dataMs?: number };
+	/** After a 401 the adapter fails fast with unauthorized for this long (default 60 s). */
+	cooldownMs?: number;
+	/** Largest Retry-After that is waited out (default 30 s); a larger one gives rate-limited. */
+	maxRetryAfterMs?: number;
 };
 
 const DEFAULTS = {
