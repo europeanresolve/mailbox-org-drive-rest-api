@@ -1,0 +1,11 @@
+{
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"files": { "includes": ["**", "!.planning", "!.claude"] },
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"nursery": { "noFloatingPromises": "error" }
+		}
+	}
+}
