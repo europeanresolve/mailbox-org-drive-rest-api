@@ -1,0 +1,15 @@
+{
+	"extends": ["config:best-practices"],
+	"packageRules": [
+		{
+			"matchManagers": ["npm"],
+			"groupName": "npm dependencies",
+			"matchUpdateTypes": ["minor", "patch"]
+		},
+		{
+			"matchPackageNames": ["exceljs"],
+			"rangeStrategy": "pin"
+		}
+	],
+	"lockFileMaintenance": { "enabled": true }
+}

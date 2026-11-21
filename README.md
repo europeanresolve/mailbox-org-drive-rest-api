@@ -12,8 +12,6 @@ A self-hostable REST API that puts a **mailbox.org Drive** (or another WebDAV st
 
 > **Status: pre-alpha / planning.** Nothing here is usable yet. Everything below describes the intended design and may change. Planning artefacts live in [`.planning/`](.planning/).
 
-In the European Resolve NGO workspace this tree lives at `it/mailbox-org-drive-rest-api` (symlink to `~/dev/github/ziohimself/mailbox-org-drive-rest-api`).
-
 ---
 
 ## Why
@@ -116,6 +114,25 @@ Copies people have downloaded, and database backups, are outside the API's reach
 ## Tech stack (planned)
 
 Node.js (LTS) · TypeScript · Fastify · JSON Schema (Ajv/TypeBox) · MongoDB · `webdav` client · `exceljs` · `mammoth` + `turndown` (`.docx` → HTML → Markdown) · Vitest · Docker Compose for local development (MongoDB plus a local WebDAV server, so tests never touch a real Drive).
+
+## Local development
+
+Prerequisites: Node 26 and Docker with Compose v2.
+
+```sh
+npm install -g pnpm@12.21.0   # the version pinned in package.json
+pnpm install                  # install dependencies
+pnpm stack:up                 # start MongoDB and a local WebDAV server
+pnpm test                     # unit tests
+pnpm test:integration         # integration tests against the local stack
+pnpm lint                     # Biome lint and format check
+pnpm typecheck                # tsc --noEmit
+pnpm build                    # compile to dist/
+pnpm stack:down               # stop the stack and discard its data
+```
+
+- Tests never touch a real Drive; they run against the local WebDAV server from the Compose stack.
+- Fixtures hold synthetic data only.
 
 ## Roadmap
 
