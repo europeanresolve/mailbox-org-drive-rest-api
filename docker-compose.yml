@@ -1,0 +1,22 @@
+name: mailbox-org-drive-rest-api-dev
+
+# Local integration stack. Both services bind to loopback only (T-01-02).
+services:
+  mongo:
+    image: mongo:8.0
+    ports: ["127.0.0.1:27017:27017"]
+    tmpfs: [/data/db]
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  webdav:
+    # No healthcheck: the image has no shell. globalSetup polls PROPFIND instead.
+    image: hacdias/webdav:v5
+    ports: ["127.0.0.1:6065:6065"]
+    volumes: ["./dev/webdav.yml:/etc/webdav/config.yml:ro"]
+    tmpfs: [/data]
