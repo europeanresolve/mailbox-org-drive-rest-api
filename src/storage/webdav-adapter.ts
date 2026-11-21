@@ -3,6 +3,7 @@ import pLimit from "p-limit";
 import pRetry from "p-retry";
 import { createClient, type FileStat, type WebDAVClient } from "webdav";
 import type { ReadOptions, StatEntry, StorageAdapter } from "./adapter.ts";
+import { DEFAULT_MAX_READ_BYTES } from "./adapter.ts";
 import { StorageError, type StorageErrorKind } from "./errors.ts";
 import type { ResolvedPath } from "./mounts.ts";
 
@@ -179,9 +180,19 @@ function toEntry(file: FileStat, name: string): StatEntry {
 
 const clientPath = (p: ResolvedPath): string => `/${p.segments.join("/")}`;
 
-const notImplemented = (op: string): never => {
-	throw new StorageError("unavailable", op);
-};
+const fail = (kind: StorageErrorKind, status?: number): Failure =>
+	new Failure(kind, status, false, false);
+
+const byName = (a: StatEntry, b: StatEntry): number =>
+	a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+
+const sameSegments = (a: ResolvedPath, b: ResolvedPath): boolean =>
+	a.segments.length === b.segments.length &&
+	a.segments.every((segment, i) => segment === b.segments[i]);
+
+// After a network error on MOVE the request may have run, so the retry can
+// meet "source missing" in any of these shapes.
+const MOVE_RECHECK_STATUSES = new Set([403, 404, 409, 412]);
 
 /** StorageAdapter over the `webdav` client with a concurrency cap and bounded retry. */
 export class WebDavAdapter implements StorageAdapter {
@@ -287,41 +298,174 @@ export class WebDavAdapter implements StorageAdapter {
 		});
 	}
 
-	async stat(p: ResolvedPath): Promise<StatEntry> {
-		const name = p.segments.at(-1) ?? "";
-		return this.#run("stat", async () => {
-			const file = await this.#call(this.#metaMs, (signal) =>
-				this.#client.stat(clientPath(p), { ...PROPFIND_OPTIONS, signal }),
-			);
-			return toEntry(file as FileStat, name);
+	/**
+	 * One Depth 0 stat on the raw client. Never goes through #run: move and
+	 * delete call it while already holding the slot, so a nested #run would
+	 * deadlock at concurrency 1.
+	 */
+	#statRaw(p: ResolvedPath): Promise<FileStat> {
+		return this.#call(this.#metaMs, async (signal) => {
+			const file = await this.#client.stat(clientPath(p), {
+				...PROPFIND_OPTIONS,
+				signal,
+			});
+			return file as FileStat;
 		});
 	}
 
-	async list(_p: ResolvedPath): Promise<StatEntry[]> {
-		return notImplemented("list");
+	/** true or false when the stat answers, undefined when it cannot tell. */
+	async #exists(p: ResolvedPath): Promise<boolean | undefined> {
+		try {
+			await this.#statRaw(p);
+			return true;
+		} catch (error) {
+			if (error instanceof Failure && error.status === 404) return false;
+			return undefined;
+		}
 	}
 
-	async read(_p: ResolvedPath, _opts?: ReadOptions): Promise<Buffer> {
-		return notImplemented("read");
+	async stat(p: ResolvedPath): Promise<StatEntry> {
+		const name = p.segments.at(-1) ?? "";
+		return this.#run("stat", async () => toEntry(await this.#statRaw(p), name));
 	}
 
-	async write(_p: ResolvedPath, _body: Buffer): Promise<StatEntry> {
-		return notImplemented("write");
+	async list(p: ResolvedPath): Promise<StatEntry[]> {
+		const target = clientPath(p);
+		return this.#run("list", async () => {
+			// No `deep` and no `glob`: the client sends Depth 1 and filters nothing.
+			const files = (await this.#call(this.#metaMs, (signal) =>
+				this.#client.getDirectoryContents(target, {
+					...PROPFIND_OPTIONS,
+					signal,
+				}),
+			)) as FileStat[];
+			// A file answers its own Depth 1 PROPFIND with itself.
+			if (files.some((f) => f.type === "file" && f.filename === target)) {
+				throw fail("conflict");
+			}
+			return files.map((f) => toEntry(f, f.basename)).sort(byName);
+		});
 	}
 
-	async mkdir(_p: ResolvedPath): Promise<void> {
-		return notImplemented("mkdir");
+	async read(p: ResolvedPath, opts?: ReadOptions): Promise<Buffer> {
+		const target = clientPath(p);
+		const max = opts?.maxBytes ?? DEFAULT_MAX_READ_BYTES;
+		return this.#run("read", async () => {
+			const meta = await this.#statRaw(p);
+			if (meta.type === "directory") throw fail("conflict");
+			if (meta.size > max) throw fail("too-large");
+			const raw = await this.#call(this.#dataMs, (signal) =>
+				this.#client.getFileContents(target, { format: "binary", signal }),
+			);
+			const body = Buffer.isBuffer(raw) ? raw : Buffer.from(raw as ArrayBuffer);
+			// The listed size can lie; check what actually arrived.
+			if (body.length > max) throw fail("too-large");
+			return body;
+		});
+	}
+
+	async write(p: ResolvedPath, body: Buffer): Promise<StatEntry> {
+		const target = clientPath(p);
+		const name = p.segments.at(-1) ?? "";
+		return this.#run("write", async () => {
+			try {
+				await this.#call(this.#dataMs, (signal) =>
+					this.#client.putFileContents(target, body, {
+						overwrite: true,
+						signal,
+					}),
+				);
+			} catch (error) {
+				// hacdias answers a PUT onto a folder with 404, OX may use 405 or 409.
+				if (error instanceof Failure && error.status === 404) {
+					const existing = await this.#statRaw(p).catch(() => undefined);
+					if (existing?.type === "directory") throw fail("conflict", 404);
+				}
+				throw error;
+			}
+			return toEntry(await this.#statRaw(p), name);
+		});
+	}
+
+	async mkdir(p: ResolvedPath): Promise<void> {
+		const target = clientPath(p);
+		return this.#run("mkdir", () =>
+			this.#call(this.#metaMs, (signal) =>
+				this.#client.createDirectory(target, { signal }),
+			),
+		);
+	}
+
+	/** True when a retried MOVE already ran: source gone and destination present. */
+	async #moveLanded(from: ResolvedPath, to: ResolvedPath): Promise<boolean> {
+		return (
+			(await this.#exists(from)) === false && (await this.#exists(to)) === true
+		);
 	}
 
 	async move(
-		_from: ResolvedPath,
-		_to: ResolvedPath,
-		_opts: { overwrite: boolean },
+		from: ResolvedPath,
+		to: ResolvedPath,
+		opts: { overwrite: boolean },
 	): Promise<void> {
-		return notImplemented("move");
+		// Compared by segments before any request is sent.
+		if (sameSegments(from, to)) throw new StorageError("conflict", "move");
+		let maybeExecuted = false;
+		return this.#run("move", async () => {
+			try {
+				await this.#call(this.#metaMs, (signal) =>
+					this.#client.moveFile(clientPath(from), clientPath(to), {
+						overwrite: opts.overwrite,
+						signal,
+					}),
+				);
+			} catch (error) {
+				if (!(error instanceof Failure)) throw error;
+				if (
+					maybeExecuted &&
+					error.status !== undefined &&
+					MOVE_RECHECK_STATUSES.has(error.status) &&
+					(await this.#moveLanded(from, to))
+				) {
+					return;
+				}
+				if (error.network) maybeExecuted = true;
+				// hacdias answers a missing source with 403: one Depth 0 stat tells them apart.
+				if (
+					(error.status === 403 ||
+						error.status === 409 ||
+						error.status === 412) &&
+					(await this.#exists(from)) === false
+				) {
+					throw fail("not-found", 404);
+				}
+				throw error;
+			}
+		});
 	}
 
-	async delete(_p: ResolvedPath): Promise<void> {
-		return notImplemented("delete");
+	async delete(p: ResolvedPath): Promise<void> {
+		const target = clientPath(p);
+		let checkedFile = false;
+		let maybeExecuted = false;
+		return this.#run("delete", async () => {
+			// Files only: hacdias deletes a folder recursively, so look first.
+			// Not repeated after a network error, when the file may be gone already.
+			if (!checkedFile) {
+				const meta = await this.#statRaw(p);
+				if (meta.type === "directory") throw fail("conflict");
+				checkedFile = true;
+			}
+			try {
+				await this.#call(this.#metaMs, (signal) =>
+					this.#client.deleteFile(target, { signal }),
+				);
+			} catch (error) {
+				if (!(error instanceof Failure)) throw error;
+				if (error.status === 404 && maybeExecuted) return;
+				if (error.network) maybeExecuted = true;
+				throw error;
+			}
+		});
 	}
 }
