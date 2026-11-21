@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -8,6 +14,8 @@ import {
 	type ConfigIssue,
 	loadConfig,
 } from "../../src/config/load.ts";
+import { start } from "../../src/server.ts";
+import { captureLogs } from "../helpers/log-capture.ts";
 
 const FIXTURES = join(import.meta.dirname, "..", "fixtures", "config");
 const SCRATCH = mkdtempSync(join(tmpdir(), "snook-config-"));
@@ -505,5 +513,57 @@ describe("loadConfig: no value is ever echoed", () => {
 		expect(JSON.stringify(error.issues) + error.message).not.toMatch(
 			new RegExp(CANARY, "i"),
 		);
+	});
+});
+
+describe("deployer example config", () => {
+	it("loads cleanly once its environment variables are set", () => {
+		const config = loadConfig({
+			CONFIG_FILE: join(
+				import.meta.dirname,
+				"..",
+				"..",
+				"config",
+				"config.example.yaml",
+			),
+			MONGO_URI: "mongodb://127.0.0.1:27017/example",
+			WEBDAV_URL: "https://dav.example.invalid/",
+			WEBDAV_USERNAME: "user@example.invalid",
+			WEBDAV_APP_PASSWORD: "synthetic-password",
+		});
+		eq(Object.keys(config.mounts)).toEqual(["forms", "content"]);
+		expect(config.mounts.forms?.mode).toBe("read-write");
+		expect(config.mounts.content?.mode).toBe("read");
+	});
+});
+
+describe("start with a valid config", () => {
+	it("listens, answers /health and logs mount names and modes but never paths", async () => {
+		const forms = readFileSync(join(FIXTURES, "valid.yaml"), "utf8").replace(
+			"/Userstore/Example Service/Forms",
+			"/Userstore/CANARY-7f3a Last, First/Forms",
+		);
+		const logs = captureLogs();
+		const app = await start({
+			env: { CONFIG_FILE: write(forms), ...PASSWORD_ENV, PORT: "0" },
+			logStream: logs.stream,
+		});
+		try {
+			const res = await app.inject({ method: "GET", url: "/health" });
+			expect(res.statusCode).toBe(200);
+			const lines = logs.lines();
+			const loaded = lines
+				.map((line) => JSON.parse(line) as Record<string, unknown>)
+				.find((entry) => entry.msg === "configuration loaded");
+			eq(loaded?.mounts).toEqual([
+				{ name: "forms", mode: "read-write" },
+				{ name: "content", mode: "read" },
+			]);
+			for (const line of lines) {
+				expect(line).not.toMatch(/canary-7f3a|Userstore|Last, First/i);
+			}
+		} finally {
+			await app.close();
+		}
 	});
 });
