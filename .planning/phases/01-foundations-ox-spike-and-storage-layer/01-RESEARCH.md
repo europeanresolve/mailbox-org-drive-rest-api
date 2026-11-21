@@ -619,18 +619,23 @@ const srv = http.createServer((req, res) => { seen.push({ m: req.method!, u: req
 | A8 | Every OX behaviour (ETag shape/stability, `If-Match`, LOCK, MOVE-over-existing, versions/trash, case sensitivity, NFC/NFD, `Last, First` encoding, 411 on chunked, `Depth: infinity`) is unknown until the spike | OX Spike Design | Adapter error mapping and Phase 3/4 designs may need change |
 | A9 | `docker/metadata-action` `type=sha` default format yields `sha-<short>` | Pattern 10 | Tag mismatch with D-21; check in the first CI run |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Does `read` return a Buffer or a stream?**
    - Known: ARCHITECTURE.md sketches `Readable`; Phase 4 downloads want streaming; retries and the concurrency slot are simpler with whole bodies; exceljs/mammoth need Buffers.
    - Unclear: Phase 4 size ceilings.
    - Recommendation: Phase 1 `read(p, {maxBytes}) => Buffer` (stat first, plus `maxContentLength`); add `readStream` additively in Phase 4. The planner confirms in the interface task.
+   - RESOLVED: plan 01-07 defines `read(p, { maxBytes? }): Promise<Buffer>` with `DEFAULT_MAX_READ_BYTES` (25 MiB); plan 01-08 (WebDavAdapter) stats first and re-checks the length; `readStream` is added alongside in Phase 4.
 2. **Spike timing versus adapter code.**
    - Recommendation: start the spike prep in Wave 1 and ask the user to run it as soon as convenient; plan Wave 4 to absorb findings. If the user cannot run it before the rest is done, STOR-01 is the only requirement left open.
+   - RESOLVED: plan 01-02 runs in Wave 2, right after the toolchain plan 01-01 that installs `webdav` (needed by probe P-19), and ends with the user's run as a human-action checkpoint; plan 01-10 (Wave 5) writes the matrix and fixtures, and plan 01-12 (Wave 6) applies the adapter changes.
 3. **Where does the spike script live?**
    - D-07 says not a maintained repo script. Recommendation: commit it only under the phase directory as an unmaintained artefact (documents exactly what was probed), never under `src/` or `test/`. The planner may choose `tmp/` instead.
+   - RESOLVED: per D-07, the probe and dry-run scripts live in gitignored `tmp/spike/` and are never committed (plan 01-02); outputs go outside the checkout; the only tracked outputs are the matrix and synthetic fixtures (plan 01-10).
 4. **mkdir strictness and `ensure` helpers.** Contract makes `mkdir` strict (existing is `conflict`). If Phase 3 needs idempotent folder creation it can wrap it.
+   - RESOLVED: plan 01-07's contract makes `mkdir` strict (existing folder and missing parent are `conflict`); Phase 3 may wrap it.
 5. **Is the `/ready` response body public?** It reveals Drive state to anyone who can reach it; acceptable for now, restrict at the gateway.
+   - RESOLVED: plan 01-09 accepts it (threat T-01-28): the body carries only enumerated states, no hosts, errors or paths; gateway restriction comes later.
 
 ## Environment Availability
 

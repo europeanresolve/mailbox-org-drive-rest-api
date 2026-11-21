@@ -1,0 +1,33 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v1.0",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Foundations, OX Spike and Storage Layer",
+      "status": "in_progress"
+    },
+    {
+      "number": "2",
+      "name": "Collections, Access Policy and Anonymous Hardening",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Mirror Worker",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Read-only Content",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress --next",
+    "label": "Advance to the next step",
+    "reason": "Phase 1 of 4 · executing"
+  },
+  "updated_at": "2026-11-21T12:52:23.168Z"
+}
