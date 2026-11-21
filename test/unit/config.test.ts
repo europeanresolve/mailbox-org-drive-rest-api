@@ -544,7 +544,7 @@ describe("start with a valid config", () => {
 			"/Userstore/CANARY-7f3a Last, First/Forms",
 		);
 		const logs = captureLogs();
-		const app = await start({
+		const { app, close } = await start({
 			env: { CONFIG_FILE: write(forms), ...PASSWORD_ENV, PORT: "0" },
 			logStream: logs.stream,
 		});
@@ -563,7 +563,7 @@ describe("start with a valid config", () => {
 				expect(line).not.toMatch(/canary-7f3a|Userstore|Last, First/i);
 			}
 		} finally {
-			await app.close();
+			await close();
 		}
 	});
 });

@@ -3,9 +3,20 @@ import pino, { type DestinationStream } from "pino";
 import { buildApp } from "./app.ts";
 import { ConfigError, loadConfig } from "./config/load.ts";
 
+export type AdapterTimings = {
+	retries?: number;
+	minTimeout?: number;
+	maxTimeout?: number;
+};
+
 export async function start(
-	options: { env?: NodeJS.ProcessEnv; logStream?: DestinationStream } = {},
-): Promise<FastifyInstance> {
+	options: {
+		env?: NodeJS.ProcessEnv;
+		logStream?: DestinationStream;
+		/** Test-only: shortens the adapter's retry waits. Not a config key. */
+		adapterTimings?: AdapterTimings;
+	} = {},
+): Promise<{ app: FastifyInstance; close(): Promise<void> }> {
 	const config = loadConfig(options.env ?? process.env);
 	const app = buildApp({
 		logger: {
@@ -36,7 +47,8 @@ export async function start(
 		},
 		"configuration loaded",
 	);
-	return app;
+	// RED skeleton: the real wiring (Mongo, Drive probe, close) comes in GREEN.
+	return { app, close: () => app.close() };
 }
 
 if (import.meta.main) {
