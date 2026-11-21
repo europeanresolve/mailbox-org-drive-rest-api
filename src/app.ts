@@ -5,5 +5,9 @@ import Fastify, { type FastifyInstance } from "fastify";
 export interface AppOptions {}
 
 export function buildApp(_options: AppOptions = {}): FastifyInstance {
-	return Fastify();
+	// Plain Fastify logger for now; plan 01-04 replaces it with the PII-free harness.
+	// /health carries no personal data.
+	const app = Fastify({ logger: { level: "info" } });
+	app.get("/health", async () => ({ status: "ok" }));
+	return app;
 }

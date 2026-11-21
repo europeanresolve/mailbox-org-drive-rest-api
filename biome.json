@@ -1,6 +1,6 @@
 {
 	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-	"files": { "includes": ["**", "!.planning", "!.claude"] },
+	"files": { "includes": ["**", "!.planning", "!.claude", "!**/*.md"] },
 	"linter": {
 		"enabled": true,
 		"rules": {

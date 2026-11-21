@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.planning
+test
+tmp
+config/*.yaml
+.env*
