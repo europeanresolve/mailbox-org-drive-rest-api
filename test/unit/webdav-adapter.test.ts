@@ -427,3 +427,34 @@ describe("WebDavAdapter retried MOVE and DELETE", () => {
 		expect(error).toMatchObject({ kind: "conflict", op: "move" });
 	});
 });
+
+// Consequences C-N of docs/ox-webdav-compatibility.md, reproduced on the fake
+// server with the status, headers and body the matrix cites.
+const OX_NS = "urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/";
+
+/** A Depth 0 207 shaped like OX: getlastmodified carries a b:dt attribute (P-02). */
+function oxFileReply(href: string): FakeReply {
+	return {
+		status: 207,
+		headers: { "Content-Type": "application/xml; charset=UTF-8" },
+		body:
+			`<?xml version="1.0" encoding="UTF-8"?><D:multistatus xmlns:D="DAV:">` +
+			`<D:response><D:href>${href}</D:href><D:propstat><D:prop>` +
+			`<D:getetag>100000-1-1-1000000000001</D:getetag>` +
+			`<D:getlastmodified xmlns:b="${OX_NS}" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:09:59 GMT</D:getlastmodified>` +
+			`<D:getcontentlength>20</D:getcontentlength><D:resourcetype />` +
+			`</D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>` +
+			`</D:multistatus>`,
+	};
+}
+
+describe("WebDavAdapter OX consequences", () => {
+	it("C-1: stat parses lastModified from an OX getlastmodified with a b:dt attribute", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "PROPFIND" ? oxFileReply(req.path) : undefined,
+		);
+		const entry = await adapter.stat(path("p02.txt"));
+		expect(entry.lastModified).toEqual(new Date("2026-01-01T00:09:59.000Z"));
+	});
+});
