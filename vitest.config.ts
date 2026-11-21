@@ -9,6 +9,15 @@ export default defineConfig({
 					include: ["test/unit/**/*.test.ts"],
 				},
 			},
+			{
+				test: {
+					name: "integration",
+					include: ["test/integration/**/*.test.ts"],
+					globalSetup: ["test/integration/global-setup.ts"],
+					fileParallelism: false,
+					testTimeout: 30_000,
+				},
+			},
 		],
 	},
 });

@@ -10,6 +10,9 @@
 	"packageManager": "pnpm@12.21.0",
 	"scripts": {
 		"test": "vitest run --project unit",
+		"test:integration": "vitest run --project integration",
+		"stack:up": "docker compose up -d --wait",
+		"stack:down": "docker compose down -v",
 		"lint": "biome ci .",
 		"typecheck": "tsc --noEmit",
 		"build": "tsc -p tsconfig.build.json"
