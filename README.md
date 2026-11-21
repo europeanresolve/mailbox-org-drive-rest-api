@@ -12,6 +12,8 @@ A self-hostable REST API that puts a **mailbox.org Drive** (or another WebDAV st
 
 > **Status: pre-alpha / planning.** Nothing here is usable yet. Everything below describes the intended design and may change. Planning artefacts live in [`.planning/`](.planning/).
 
+In the European Resolve NGO workspace this tree lives at `it/mailbox-org-drive-rest-api` (symlink to `~/dev/github/ziohimself/mailbox-org-drive-rest-api`).
+
 ---
 
 ## Why
