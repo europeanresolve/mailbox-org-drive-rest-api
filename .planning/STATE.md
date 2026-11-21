@@ -4,11 +4,11 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-11-PLAN.md
-last_updated: "2026-11-21T16:30:06.074Z"
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-11-21T16:30:19.116Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: d25e09b94e0a1c9c2468cf5ee3cdfe90fe9db083
+state_head: 2ee7f2efaf36e73d4a64fdf8ed689dd8bdc64b29
 progress:
   total_phases: 4
   completed_phases: 0
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 10min | 2 tasks | 11 files |
 | Phase 01 P04 | 5min | 2 tasks | 4 files |
 | Phase 01 P11 | 6min | 2 tasks | 7 files |
+| Phase 01 P03 | 4min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-04]: Fastify err serializer cast with 'as never' because typings require message/stack; allow-list omits them
 - [Phase 01]: [01-04]: text/plain bodies return 400 (default parser + schema), 415 only for unparsed types like application/xml
 - [Phase 01]: [01-11]: Integration helpers use fetch with Basic auth for WebDAV; assertLoopback never echoes the offending URL (may carry credentials)
+- [Phase 01]: [01-03]: ResolvedPath implements util.inspect.custom so logging never prints path segments (D-19)
+- [Phase 01]: [01-03]: Mount issue order is per-mount (name, root) in config order, then one OVERLAP per pair; AT_ROOT means zero segments after the leading slash
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:30:06.056Z
-Stopped at: Completed 01-11-PLAN.md
+Last session: 2026-11-21T16:30:19.097Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
