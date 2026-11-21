@@ -23,7 +23,10 @@ export class MemoryAdapter implements StorageAdapter {
 	]);
 
 	#entry(p: ResolvedPath, node: Node): StatEntry {
-		const name = p.segments.at(-1) ?? "";
+		return this.#entryOf(p.segments.at(-1) ?? "", node);
+	}
+
+	#entryOf(name: string, node: Node): StatEntry {
 		if (node.kind === "dir") {
 			return {
 				name,
@@ -48,8 +51,25 @@ export class MemoryAdapter implements StorageAdapter {
 		return this.#entry(p, node);
 	}
 
-	list(_p: ResolvedPath): Promise<StatEntry[]> {
-		return Promise.reject(new Error("not implemented"));
+	async list(p: ResolvedPath): Promise<StatEntry[]> {
+		const node = this.#nodes.get(keyOf(p.segments));
+		if (node === undefined) throw new StorageError("not-found", "list");
+		if (node.kind !== "dir") throw new StorageError("conflict", "list");
+		const entries: StatEntry[] = [];
+		for (const [key, child] of this.#nodes) {
+			if (key === "") continue;
+			const segments = key.split("/");
+			if (
+				segments.length === p.segments.length + 1 &&
+				p.segments.every((s, i) => segments[i] === s)
+			) {
+				entries.push(this.#entryOf(segments.at(-1) ?? "", child));
+			}
+		}
+		// Code-unit order, not locale order.
+		return entries.sort((a, b) =>
+			a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+		);
 	}
 
 	async read(p: ResolvedPath, opts?: ReadOptions): Promise<Buffer> {
@@ -64,6 +84,9 @@ export class MemoryAdapter implements StorageAdapter {
 	async write(p: ResolvedPath, body: Buffer): Promise<StatEntry> {
 		const parent = this.#nodes.get(parentKey(p.segments));
 		if (parent?.kind !== "dir") throw new StorageError("conflict", "write");
+		if (this.#nodes.get(keyOf(p.segments))?.kind === "dir") {
+			throw new StorageError("conflict", "write");
+		}
 		const copy = Buffer.from(body);
 		const node: Node = {
 			kind: "file",
@@ -83,15 +106,45 @@ export class MemoryAdapter implements StorageAdapter {
 		this.#nodes.set(key, { kind: "dir", lastModified: new Date() });
 	}
 
-	move(
-		_from: ResolvedPath,
-		_to: ResolvedPath,
-		_opts: { overwrite: boolean },
+	async move(
+		from: ResolvedPath,
+		to: ResolvedPath,
+		opts: { overwrite: boolean },
 	): Promise<void> {
-		return Promise.reject(new Error("not implemented"));
+		const fromKey = keyOf(from.segments);
+		const toKey = keyOf(to.segments);
+		// Compared by segments before any state is read or changed.
+		if (fromKey === toKey) throw new StorageError("conflict", "move");
+		const source = this.#nodes.get(fromKey);
+		if (source === undefined) throw new StorageError("not-found", "move");
+		if (toKey.startsWith(`${fromKey}/`)) {
+			throw new StorageError("conflict", "move");
+		}
+		if (this.#nodes.get(parentKey(to.segments))?.kind !== "dir") {
+			throw new StorageError("conflict", "move");
+		}
+		const existing = this.#nodes.get(toKey);
+		if (existing !== undefined) {
+			// Never replace a folder: that would drop staff work.
+			if (!opts.overwrite || existing.kind === "dir") {
+				throw new StorageError("conflict", "move");
+			}
+		}
+		const moving = [...this.#nodes].filter(
+			([key]) => key === fromKey || key.startsWith(`${fromKey}/`),
+		);
+		for (const [key] of moving) this.#nodes.delete(key);
+		for (const [key, node] of moving) {
+			this.#nodes.set(toKey + key.slice(fromKey.length), node);
+		}
 	}
 
-	delete(_p: ResolvedPath): Promise<void> {
-		return Promise.reject(new Error("not implemented"));
+	async delete(p: ResolvedPath): Promise<void> {
+		const key = keyOf(p.segments);
+		const node = this.#nodes.get(key);
+		if (node === undefined) throw new StorageError("not-found", "delete");
+		// Files only: no folder is ever deleted, empty or not.
+		if (node.kind === "dir") throw new StorageError("conflict", "delete");
+		this.#nodes.delete(key);
 	}
 }
