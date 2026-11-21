@@ -70,6 +70,8 @@ Staff keep working in the Drive they already use, and developers get a safe, fas
 - **Privacy**: Collection records are personal data; no personal data in logs
 - **Data in repo**: Planning artefacts and fixtures contain only synthetic data (first adopter's AI tooling policy)
 - **Testing**: Integration tests use the local Docker stack, never a real Drive
+- **Development method**: Test-driven development: each behaviour starts as a failing test (RED), then the minimum code to pass (GREEN), then refactor. GSD `workflow.tdd_mode` is on.
+- **Branching**: Trunk-based development: `main` is the trunk and is always green and releasable. Work lands on `main` directly or through short-lived branches merged within a day. There are no long-lived phase, milestone or release branches (GSD `git.branching_strategy: none`). Unfinished features are hidden behind config, not branches.
 - **Licensing note**: MongoDB Community is SSPL (self-hosting fine); FerretDB (Apache-2.0) may be tested in CI if a fully OSI-licensed stack matters
 - **Trademark**: "mailbox-org" used descriptively only; README states the project is unofficial
 
@@ -84,6 +86,8 @@ Staff keep working in the Drive they already use, and developers get a safe, fas
 | v1 auth: `anonymous` / `apiKey` per collection per operation; OIDC later | Keycloak not deployed until internal forms need it | — Pending |
 | Rate limiting at the gateway (Kong reference config) with in-app fallback | Works with or without a gateway | — Pending |
 | Fastify as HTTP framework | Native JSON Schema validation and OpenAPI | — Pending (revisit in phase 1) |
+| TDD (RED → GREEN → REFACTOR) for all behaviour | Correctness over throughput; WebDAV and mirror edge cases are easy to regress | — Pending |
+| Trunk-based development on `main`, no long-lived branches | Small, continuously integrated changes; CI on every merge keeps trunk releasable | — Pending |
 | Milestone v1.0 = Foundation + Collections (forms) + Read-only content; v2.0 = OIDC + erasure; v3.0 = object storage | Deliver website forms first; keep later concerns out of the first roadmap | — Pending |
 
 ## Evolution
