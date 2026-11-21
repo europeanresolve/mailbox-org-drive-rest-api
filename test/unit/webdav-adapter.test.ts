@@ -457,4 +457,21 @@ describe("WebDavAdapter OX consequences", () => {
 		const entry = await adapter.stat(path("p02.txt"));
 		expect(entry.lastModified).toEqual(new Date("2026-01-01T00:09:59.000Z"));
 	});
+
+	it("C-3: read maps OX's 415 for GET on a folder to conflict", async () => {
+		const { server, adapter, path } = await start();
+		// The stat-first guard sees a file (a race), then OX answers the GET as
+		// it does for a folder (P-13): 415, httpd/unix-directory, empty body.
+		server.script((req) =>
+			req.method === "GET"
+				? { status: 415, headers: { "Content-Type": "httpd/unix-directory" } }
+				: undefined,
+		);
+		const error = await errorOf(adapter.read(path("dir")));
+		// Single-line assertions keep the TAP report parseable for the RED gate.
+		expect((error as StorageError).kind).toBe("conflict");
+		expect((error as StorageError).op).toBe("read");
+		expect((error as StorageError).status).toBe(415);
+		expect(server.requests.filter((r) => r.method === "GET")).toHaveLength(1);
+	});
 });
