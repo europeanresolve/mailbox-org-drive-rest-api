@@ -119,6 +119,25 @@ Short version:
 7. Review every file in `OUT_DIR/anon/`, delete anything personal, then delete `OUT_DIR/raw/`.
 8. Resume with `done <absolute path of anon/>`. The executor then runs the plan's `anon ok` check (summary.json and ui-answers.json non-empty, no `mailbox.org` host or foreign `Userstore/` segment) and records the path here for plan 01-10.
 
+## Continuation check (2026-11-21, second run): still blocked
+
+`OX_WEBDAV_URL`, `OX_WEBDAV_USER` and `OX_WEBDAV_PASSWORD` are still not in the environment, so Task 3 was not run and no request went to mailbox.org. No OX result exists. STOR-01 and DEV-04 stay open; STATE.md and ROADMAP.md are unchanged.
+
+Offline state re-verified, nothing new built:
+- `node tmp/spike/ox-probe.mjs --self-test` prints `self-test ok`.
+- `tmp/ox-dry-run/out/anon/` still holds the synthetic hacdias recording (226 files, `summary.json` non-empty, no `dry-password` or `127.0.0.1` in it). Plan 01-10 may use it only for rows marked "(dry-run)"; P-02 and P-03 must come from the OX run.
+- `docs/ox-webdav-compatibility.md` and `test/fixtures/ox/` were NOT stubbed. They belong to plan 01-10 (`files_modified`), plan 01-02 lists no tracked files, and a stub could be mistaken for an OX observation.
+
+### Unblock (about 10 minutes of your time)
+
+1. Drive web UI: create an empty folder `probe-2026-11-21` inside your personal Userstore folder. Create a WebDAV Client application password.
+2. In your own shell: `export OX_WEBDAV_URL=<folder URL ending in /probe-2026-11-21/>`, `export OX_WEBDAV_USER=<login>`, `read -s OX_WEBDAV_PASSWORD && export OX_WEBDAV_PASSWORD`.
+3. Re-run the executor in that shell for plan 01-02 (it runs the probe and asks U-01..U-10; answer with synthetic data only), or run `node tmp/spike/ox-probe.mjs` yourself from `/Users/serhiy/orca/workspaces/mailbox-org-drive-rest-api/snook`.
+4. Afterwards: probe folder gone, Drive trash emptied, app password deleted, `unset OX_WEBDAV_*`, review `OUT_DIR/anon/`, delete `OUT_DIR/raw/`.
+5. Resume with `done <absolute path of anon/>`. The executor then runs the `anon ok` check, records `anon_path` here, marks STOR-01 and DEV-04 complete and advances STATE.md and ROADMAP.md.
+
+Plans 01-10 and 01-12 stay blocked on `anon_path` (still TBD).
+
 ## Deviations from Plan
 
 ### Auto-fixed Issues
