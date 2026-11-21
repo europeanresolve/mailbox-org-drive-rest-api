@@ -1,13 +1,21 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, LogController } from "fastify";
+import type { DestinationStream } from "pino";
+import { loggerOptions, registerLogging } from "./http/logging.ts";
 
-// Later plans extend this with `logger` and `checks`.
-// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty, extended by plans 01-04 and 01-09
-export interface AppOptions {}
+// Later plans extend this with `checks`.
+export interface AppOptions {
+	logger?: { level?: string; stream?: DestinationStream };
+}
 
-export function buildApp(_options: AppOptions = {}): FastifyInstance {
-	// Plain Fastify logger for now; plan 01-04 replaces it with the PII-free harness.
-	// /health carries no personal data.
-	const app = Fastify({ logger: { level: "info" } });
+export function buildApp(options: AppOptions = {}): FastifyInstance {
+	const app = Fastify({
+		logger: loggerOptions(options.logger?.level, options.logger?.stream),
+		// Fastify's default request logging carries the raw URL; logging.ts emits one safe line instead.
+		logController: new LogController({ disableRequestLogging: true }),
+		// Request ids are always generated; a client-sent header must not be trusted or logged.
+		requestIdHeader: false,
+	});
+	registerLogging(app);
 	app.get("/health", async () => ({ status: "ok" }));
 	return app;
 }
