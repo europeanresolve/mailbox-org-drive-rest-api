@@ -89,17 +89,41 @@ describe("OX replay: Depth 0 PROPFIND on a file", () => {
 describe("OX replay: Depth 0 PROPFIND on a folder", () => {
 	it("stat of the probe folder returns kind dir", async () => {
 		const { adapter, path } = await replay("p02-propfind-depth0-folder.xml");
+		const xml = fixture("p02-propfind-depth0-folder.xml");
+		expect(xml).toContain("<D:collection />");
 		const entry = await adapter.stat(path(""));
-		// RED: deliberately wrong placeholder.
-		expect(entry.kind).toBe("file");
+		expect(entry.kind).toBe("dir");
+		expect(entry.size).toBe(0);
 	});
 });
+
+/** Decoded last segment of every href in the fixture except the folder's own. */
+function listedNames(xml: string): string[] {
+	const hrefs = [...xml.matchAll(/<D:href>([^<]*)<\/D:href>/g)].map(
+		(m) => m[1] ?? "",
+	);
+	return hrefs
+		.filter((href) => !href.endsWith("/"))
+		.map((href) => decodeURIComponent(href.slice(href.lastIndexOf("/") + 1)));
+}
 
 describe("OX replay: Depth 1 listing with special names", () => {
 	it("list returns every synthetic name decoded, without the folder itself", async () => {
 		const { adapter, path } = await replay("p03-propfind-depth1-names.xml");
+		const expected = listedNames(fixture("p03-propfind-depth1-names.xml"));
+		// The names P-03 created: comma-space, ampersand, hash, percent, plus,
+		// NFC and NFD Müller, emoji, plus the P-02 file.
+		expect(expected).toHaveLength(9);
+		expect(expected).toContain("Last, First.txt");
+		expect(expected).toContain("pct%41.txt");
+		expect(expected).toContain("emoji-\u{1F600}.txt");
+		expect(expected).toContain("M\u00fcller.txt");
+		expect(expected).toContain("Mu\u0308ller.txt");
 		const entries = await adapter.list(path(""));
-		// RED: deliberately wrong placeholder.
-		expect(entries.map((e) => e.name)).toEqual([]);
+		const names = entries.map((e) => e.name);
+		// OX lists in no particular order; the adapter sorts in code-unit order.
+		expect(names).toEqual([...expected].sort());
+		expect(names).not.toContain("probe-2026-01-01");
+		expect(entries.every((e) => e.kind === "file")).toBe(true);
 	});
 });
