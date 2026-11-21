@@ -85,3 +85,21 @@ describe("OX replay: Depth 0 PROPFIND on a file", () => {
 		);
 	});
 });
+
+describe("OX replay: Depth 0 PROPFIND on a folder", () => {
+	it("stat of the probe folder returns kind dir", async () => {
+		const { adapter, path } = await replay("p02-propfind-depth0-folder.xml");
+		const entry = await adapter.stat(path(""));
+		// RED: deliberately wrong placeholder.
+		expect(entry.kind).toBe("file");
+	});
+});
+
+describe("OX replay: Depth 1 listing with special names", () => {
+	it("list returns every synthetic name decoded, without the folder itself", async () => {
+		const { adapter, path } = await replay("p03-propfind-depth1-names.xml");
+		const entries = await adapter.list(path(""));
+		// RED: deliberately wrong placeholder.
+		expect(entries.map((e) => e.name)).toEqual([]);
+	});
+});
