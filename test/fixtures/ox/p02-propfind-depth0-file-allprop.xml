@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Anonymised OX App Suite recording (host dav.example.invalid, P-02-4). ETags are synthetic. -->
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/p02.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:creationdate xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:09:59 GMT</D:creationdate>
+        <D:displayname>p02.txt</D:displayname>
+        <D:getcontentlanguage />
+        <D:getcontentlength>20</D:getcontentlength>
+        <D:getcontenttype>text/plain</D:getcontenttype>
+        <D:getetag>100000-1-1-1000000000001</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:09:59 GMT</D:getlastmodified>
+        <D:resourcetype />
+        <D:lockdiscovery />
+        <D:supportedlock>
+          <D:lockentry>
+            <D:lockscope>
+              <D:exclusive />
+            </D:lockscope>
+            <D:locktype>
+              <D:write />
+            </D:locktype>
+          </D:lockentry>
+          <D:lockentry>
+            <D:lockscope>
+              <D:shared />
+            </D:lockscope>
+            <D:locktype>
+              <D:write />
+            </D:locktype>
+          </D:lockentry>
+        </D:supportedlock>
+        <D:source />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>

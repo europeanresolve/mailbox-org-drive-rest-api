@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Anonymised OX App Suite recording (host dav.example.invalid, P-03-9). ETags are synthetic. -->
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:00:00 GMT</D:getlastmodified>
+        <D:resourcetype>
+          <D:collection />
+        </D:resourcetype>
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+    <D:propstat>
+      <D:prop>
+        <D:getetag />
+        <D:getcontentlength />
+      </D:prop>
+      <D:status>HTTP/1.1 404 NOT FOUND</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/emoji-%F0%9F%98%80.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-1-1-1000000000001</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:02 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/p02.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-2-1-1000000000002</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:09:59 GMT</D:getlastmodified>
+        <D:getcontentlength>20</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/Mu%CC%88ller.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-3-1-1000000000003</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:01 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/a%26b.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-4-1-1000000000004</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:00 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/pct%2541.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-5-1-1000000000005</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:00 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/M%C3%BCller.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-6-1-1000000000006</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:01 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/plus%2B1.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-7-1-1000000000007</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:01 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/Last%2C%20First.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-8-1-1000000000008</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:00 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+  <D:response>
+    <D:href>/servlet/webdav.infostore/Userstore/Last,%20First/probe-2026-01-01/hash%231.txt</D:href>
+    <D:propstat>
+      <D:prop>
+        <D:getetag>100000-9-1-1000000000009</D:getetag>
+        <D:getlastmodified xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/" b:dt="dateTime.rfc1123">Thu, 01 Jan 2026 00:10:00 GMT</D:getlastmodified>
+        <D:getcontentlength>9</D:getcontentlength>
+        <D:resourcetype />
+      </D:prop>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>
