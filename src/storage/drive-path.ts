@@ -1,12 +1,31 @@
 import { StorageError } from "./errors.ts";
 
-// Tracer rule set: empty, "." and "..". Task 2 adds the full rules test-first.
-// Input arrives already decoded once by the router and is never decoded again.
+const MAX_SEGMENT_BYTES = 255;
+
+function isBad(form: string): boolean {
+	if (form === "" || form === "." || form === "..") return true;
+	for (const char of form) {
+		const code = char.codePointAt(0) ?? 0;
+		if (char === "/" || char === "\\") return true;
+		// C0 controls (incl. NUL), DEL and C1 controls.
+		if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+	}
+	return false;
+}
+
+// Input arrives already decoded once by the router and is never decoded again:
+// a literal "%2e%2e" is a file name. The raw form and its NFKC fold are both
+// checked, so compatibility dots and solidi cannot pose as "." ".." or "/".
 function checkSegment(segment: string): string {
-	if (segment === "" || segment === "." || segment === "..") {
+	const nfc = segment.normalize("NFC");
+	if (
+		isBad(segment) ||
+		isBad(segment.normalize("NFKC")) ||
+		Buffer.byteLength(nfc, "utf8") > MAX_SEGMENT_BYTES
+	) {
 		throw new StorageError("invalid-path", "resolve");
 	}
-	return segment.normalize("NFC");
+	return nfc;
 }
 
 /** Relative path inside a mount: "" is the mount root itself. */
