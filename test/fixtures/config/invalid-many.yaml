@@ -1,0 +1,15 @@
+# Synthetic fixture: four distinct errors that must all surface in one failure.
+# - unknown top-level key `extra`
+# - mount name `Bad_Name` violates ^[a-z][a-z0-9-]{0,31}$
+# - no `mongo` block
+# - http WebDAV URL to a non-loopback host
+extra: true
+storage:
+  webdav:
+    url: http://dav.example.invalid/
+    username: user@example.invalid
+    password: canary-7f3a-secret
+mounts:
+  Bad_Name:
+    path: /Userstore/Example Service/Forms
+    mode: read-write
