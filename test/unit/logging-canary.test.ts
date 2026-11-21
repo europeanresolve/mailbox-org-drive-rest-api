@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, InjectOptions } from "fastify";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.ts";
 import { captureLogs, type LogCapture } from "../helpers/log-capture.ts";
@@ -61,7 +61,7 @@ describe("logging canary", () => {
 		let requests = 0;
 		const bodies: string[] = [];
 
-		async function send(opts: Parameters<FastifyInstance["inject"]>[0]) {
+		async function send(opts: InjectOptions) {
 			const before = logs.lines().length;
 			requests += 1;
 			const res = await app.inject(opts);
