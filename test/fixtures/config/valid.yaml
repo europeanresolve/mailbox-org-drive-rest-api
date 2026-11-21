@@ -1,0 +1,15 @@
+# Synthetic fixture: a complete, valid config. Only the password comes from the environment.
+storage:
+  webdav:
+    url: https://dav.example.invalid/
+    username: user@example.invalid
+    password: ${WEBDAV_APP_PASSWORD}
+mongo:
+  uri: mongodb://127.0.0.1:27017/example
+mounts:
+  forms:
+    path: /Userstore/Example Service/Forms
+    mode: read-write
+  content:
+    path: /Userstore/Example Service/Content
+    mode: read
