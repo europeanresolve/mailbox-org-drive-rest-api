@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Team can read a written OX App Suite / mailbox.org WebDAV compatibility matrix (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning and trash on overwrite and delete, path encoding of names like `Last, First`) backed by synthetic fixtures
   4. Deployer can allow-list mounts with `read` or `read-write` mode: a path outside a mount or a write to a `read` mount is rejected, and a traversal corpus (`..`, encoded separators, Unicode normalisation) cannot escape a mount
   5. The WebDAV and in-memory `StorageAdapter` implementations both pass one shared contract suite (list, stat, read, write, create folder, move, delete), and the WebDAV adapter retries 429/503/network failures with exponential backoff, never retries 401/403, caps concurrency, and never issues deep PROPFIND traversals
-**Plans:** 11/12 plans executed
+**Plans:** 12/12 plans executed
 
 Plans (listed in wave order):
 - [x] 01-01-PLAN.md — Walking skeleton, part 1: package legitimacy gate, toolchain, `/health` from the container image (wave 1)
@@ -44,7 +44,7 @@ Plans (listed in wave order):
 - [x] 01-08-PLAN.md — `WebDavAdapter`: retry, cooldown, concurrency cap, Depth rules, contract on Compose (wave 4)
 - [x] 01-09-PLAN.md — `/ready`, Drive health, composition root, end-to-end canary sweep (wave 5)
 - [x] 01-10-PLAN.md — OX compatibility matrix, fixtures, replay tests, synthetic-data guard (wave 5)
-- [ ] 01-12-PLAN.md — Adapter and path-rule adjustments from the matrix's Consequences (wave 6)
+- [x] 01-12-PLAN.md — Adapter and path-rule adjustments from the matrix's Consequences (wave 6)
 
 ### Phase 2: Collections, Access Policy and Anonymous Hardening
 **Goal**: A website can safely submit forms to anonymous create endpoints, and deployers can manage records through API-key-protected CRUD, all defined in config with default-deny access.
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations, OX Spike and Storage Layer | 11/12 | In Progress | - |
+| 1. Foundations, OX Spike and Storage Layer | 12/12 | In Progress | - |
 | 2. Collections, Access Policy and Anonymous Hardening | 0/TBD | Not started | - |
 | 3. Mirror Worker | 0/TBD | Not started | - |
 | 4. Read-only Content | 0/TBD | Not started | - |

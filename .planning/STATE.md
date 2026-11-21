@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-10-PLAN.md
-last_updated: "2026-11-21T22:00:21.687Z"
+stopped_at: Completed 01-12-PLAN.md
+last_updated: "2026-11-21T22:06:07.758Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: caf3d98841a185aa0caf694a15284f8b1f8d5903
+state_head: 4af0a916b2baea613694119e85bd3cad8573d282
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 11 of 12
+Plan: 12 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P05 | 2h | 3 tasks | 3 files |
 | Phase 01 P02 | 1h | 3 tasks | 1 files |
 | Phase 01 P10 | 12min | 3 tasks | 12 files |
+| Phase 01 P12 | 10min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-05: Renovate App install recorded pending (owner browser action); CI, GHCR publish and anonymous pull verified on main
 - [Phase 01]: [01-02]: OX spike anon/ record lives outside the repo at ~/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon; OX honours If-Match (412), unlike hacdias, and ETags must be synthesised in fixtures
 - [Phase 01]: [01-10]: OX fixtures use synthetic ETags; lastModified null on OX (C-1) and NFD-vs-NFC path folding (C-2) are left for plan 01-12 and pinned by an it.fails replay case
+- [Phase 01]: [01-12] Keep NFC fold for OX NFD names (C-2); NFD files stay unreachable via adapter, listed as OX returns them
 
 ### Pending Todos
 
@@ -103,7 +105,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: OX behaviour is documented in docs/ox-webdav-compatibility.md; its "Consequences" section lists the adapter changes C-1..C-3 that plan 01-12 applies, the ETag/validator input for Phase 4 and the MOVE-vs-PUT input for the Phase 3 mirror
+- [Phase 1]: OX behaviour is documented in docs/ox-webdav-compatibility.md; its "Consequences" section holds the ETag/validator input for Phase 4 and the MOVE-vs-PUT input for the Phase 3 mirror; adapter changes C-1..C-3 are applied (plan 01-12); NFD-named files remain unreachable by design (C-2)
 - [Phase 1]: Ask mailbox.org support about WebDAV request limits before production use; keep low concurrency and backoff meanwhile
 - [Phase 2]: Open decisions for discuss-phase: config-only collections, API keys in config behind `KeyStore`, hard vs soft delete (COLL-06), pnpm vs npm
 - [Phase 3]: Mirror workbook layout (one per collection recommended) and atomic-write mechanism depend on the spike; verify exceljs determinism
@@ -119,6 +121,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T22:00:21.645Z
-Stopped at: Completed 01-10-PLAN.md
+Last session: 2026-11-21T22:06:07.737Z
+Stopped at: Completed 01-12-PLAN.md
 Resume file: None
