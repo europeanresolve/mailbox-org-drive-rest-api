@@ -138,6 +138,16 @@ Offline state re-verified, nothing new built:
 
 Plans 01-10 and 01-12 stay blocked on `anon_path` (still TBD).
 
+## Continuation check (2026-11-21, third run): `anon ok` FAILED, plan stays open
+
+Resume signal received: `done` with the anon/ path `/Users/serhiy/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon` (224 files; `summary.json` has P-01..P-19 plus GUARD and CLEANUP rows; `ui-answers.json` has U-01..U-10). The live probe was not re-run.
+
+The plan's `anon ok` command printed `anon/ui-answers.json` and no `anon ok`: the free-text answer to U-03 contains a pasted `https://app.mailbox.org/appsuite/...` link with the account's numeric folder and file ids. Every other file passes: all dates are the synthetic `2026-01-01`, the folder segment is `probe-2026-01-01` under `Userstore/Last,%20First/`, no `Authorization`, password, `@` or other host (only the `open-xchange.com` lock namespace), and quota PROPFIND answers are empty (404).
+
+The fix needs a write outside the checkout, so the executor did not edit the user's file. Redact that one URL in `ui-answers.json` (for example replace it with `<OX UI URL redacted>`), then resume with the same path. STOR-01 and DEV-04 stay open; STATE.md and ROADMAP.md are unchanged. `anon_path` stays TBD until the check passes.
+
+Also open: `OUT_DIR/raw/` still exists (222 files). The plan wants it deleted once anon/ is reviewed; the resume signal did not confirm folder, trash, app password and env cleanup. `OX_WEBDAV_*` are not in the executor's environment.
+
 ## Deviations from Plan
 
 ### Auto-fixed Issues
