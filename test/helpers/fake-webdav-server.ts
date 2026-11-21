@@ -61,6 +61,18 @@ function multistatus(inner: string): string {
 	return `<?xml version="1.0" encoding="utf-8"?><D:multistatus xmlns:D="DAV:">${inner}</D:multistatus>`;
 }
 
+/** A Depth 0 PROPFIND answer for one target, as a file (9 bytes) or a folder. */
+export function propfindReply(
+	href: string,
+	kind: "file" | "dir",
+): Exclude<FakeReply, "destroy"> {
+	return {
+		status: 207,
+		headers: { "Content-Type": "application/xml; charset=utf-8" },
+		body: multistatus(entry(href, kind === "dir", kind === "dir" ? 0 : 9)),
+	};
+}
+
 /** Default reply: Depth 1 lists the target as a folder with one child; Depth 0 is a 9-byte file. */
 function defaultReply(req: RecordedRequest): Exclude<FakeReply, "destroy"> {
 	switch (req.method) {

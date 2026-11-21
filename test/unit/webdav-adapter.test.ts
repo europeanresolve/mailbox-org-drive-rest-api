@@ -9,6 +9,7 @@ import {
 import {
 	type FakeReply,
 	type FakeWebDav,
+	propfindReply,
 	type Responder,
 	startFakeWebDav,
 } from "../helpers/fake-webdav-server.ts";
@@ -166,16 +167,29 @@ describe("WebDavAdapter never-retry and cooldown", () => {
 });
 
 describe("WebDavAdapter request discipline", () => {
-	it("sends every PROPFIND with Depth 0 or 1, an XML content type and the explicit body", async () => {
+	it("records only PROPFINDs with Depth 0 or 1 across all seven operations", async () => {
 		const { server, adapter, path } = await start();
 		await adapter.stat(path("f.txt"));
+		await adapter.list(path("d"));
+		await adapter.read(path("f.txt"));
+		await adapter.write(path("f.txt"), Buffer.from("synthetic"));
+		await adapter.mkdir(path("e"));
+		await adapter.move(path("f.txt"), path("g.txt"), { overwrite: false });
+		await adapter.delete(path("g.txt"));
 		const propfinds = server.requests.filter((r) => r.method === "PROPFIND");
-		expect(propfinds.length).toBeGreaterThan(0);
+		expect(propfinds.length).toBeGreaterThanOrEqual(5);
 		for (const r of propfinds) {
 			expect(["0", "1"]).toContain(r.depth);
 			expect(r.headers["content-type"]).toContain("application/xml");
 			expect(r.body).toContain("<d:getetag/>");
 		}
+		expect(
+			server.requests.every((r) =>
+				["PROPFIND", "GET", "PUT", "MKCOL", "MOVE", "DELETE"].includes(
+					r.method,
+				),
+			),
+		).toBe(true);
 	});
 
 	it("never has more than 2 requests in flight with 10 calls and concurrency 2", async () => {
@@ -235,4 +249,159 @@ describe("WebDavAdapter errors carry no path", () => {
 			expect((err as Error).cause).toBeUndefined();
 		});
 	}
+});
+
+describe("WebDavAdapter semantic rules", () => {
+	it("rejects a move onto itself with conflict and sends no request", async () => {
+		const { server, adapter, path } = await start();
+		const error = await errorOf(
+			adapter.move(path("f.txt"), path("f.txt"), { overwrite: true }),
+		);
+		expect(error).toMatchObject({ kind: "conflict", op: "move" });
+		expect(server.requests).toHaveLength(0);
+	});
+
+	it("classifies a 403 MOVE with a missing source as not-found using one Depth 0 stat", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) => {
+			if (req.method === "MOVE") return { status: 403 };
+			if (req.method === "PROPFIND") return { status: 404 };
+			return undefined;
+		});
+		const error = await errorOf(
+			adapter.move(path("from"), path("to"), { overwrite: false }),
+		);
+		expect(error).toMatchObject({ kind: "not-found", op: "move" });
+		expect(server.requests.map((r) => [r.method, r.depth])).toEqual([
+			["MOVE", undefined],
+			["PROPFIND", "0"],
+		]);
+		expect(server.requests[1]?.path).toBe("/m/from");
+	});
+
+	it("classifies a 412 MOVE with the source present as conflict", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "MOVE" ? { status: 412 } : undefined,
+		);
+		const error = await errorOf(
+			adapter.move(path("from"), path("to"), { overwrite: false }),
+		);
+		expect(error).toMatchObject({ kind: "conflict", op: "move", status: 412 });
+	});
+
+	it("sends Overwrite F for overwrite false and T for overwrite true", async () => {
+		const { server, adapter, path } = await start();
+		await adapter.move(path("a"), path("b"), { overwrite: false });
+		await adapter.move(path("c"), path("d"), { overwrite: true });
+		const moves = server.requests.filter((r) => r.method === "MOVE");
+		expect(moves.map((r) => r.headers.overwrite)).toEqual(["F", "T"]);
+	});
+
+	it("rejects deleting a folder with conflict and never sends DELETE", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "PROPFIND" ? propfindReply(req.path, "dir") : undefined,
+		);
+		const error = await errorOf(adapter.delete(path("d")));
+		expect(error).toMatchObject({ kind: "conflict", op: "delete" });
+		expect(server.requests.some((r) => r.method === "DELETE")).toBe(false);
+	});
+
+	it("rejects reading a folder with conflict and never sends GET", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "PROPFIND" ? propfindReply(req.path, "dir") : undefined,
+		);
+		const error = await errorOf(adapter.read(path("d")));
+		expect(error).toMatchObject({ kind: "conflict", op: "read" });
+		expect(server.requests.some((r) => r.method === "GET")).toBe(false);
+	});
+
+	it("rejects a file above maxBytes with too-large before downloading it", async () => {
+		const { server, adapter, path } = await start();
+		const error = await errorOf(adapter.read(path("f.txt"), { maxBytes: 4 }));
+		expect(error).toMatchObject({ kind: "too-large", op: "read" });
+		expect(server.requests.some((r) => r.method === "GET")).toBe(false);
+	});
+
+	it("rejects a listing that answers with the requested file itself as conflict", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "PROPFIND" ? propfindReply(req.path, "file") : undefined,
+		);
+		const error = await errorOf(adapter.list(path("f.txt")));
+		expect(error).toMatchObject({ kind: "conflict", op: "list" });
+	});
+});
+
+describe("WebDavAdapter retried MOVE and DELETE", () => {
+	it("counts a retried DELETE that gets 404 as success", async () => {
+		const { server, adapter, path } = await start();
+		let deletes = 0;
+		server.script((req) => {
+			if (req.method !== "DELETE") return undefined;
+			deletes++;
+			return deletes === 1 ? "destroy" : { status: 404 };
+		});
+		await expect(adapter.delete(path("f.txt"))).resolves.toBeUndefined();
+		expect(deletes).toBe(2);
+	});
+
+	it("does not mask a 404 on a first DELETE attempt", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) =>
+			req.method === "DELETE" ? { status: 404 } : undefined,
+		);
+		const error = await errorOf(adapter.delete(path("f.txt")));
+		expect(error).toMatchObject({ kind: "not-found", op: "delete" });
+	});
+
+	function scriptRetriedMove(server: FakeWebDav): void {
+		let moves = 0;
+		server.script((req) => {
+			if (req.method === "MOVE") {
+				moves++;
+				return moves === 1 ? "destroy" : { status: 403 };
+			}
+			if (req.method === "PROPFIND" && req.path === "/m/from") {
+				return { status: 404 };
+			}
+			return undefined;
+		});
+	}
+
+	it("counts a retried MOVE as success when the source is gone and the destination exists", async () => {
+		const { server, adapter, path } = await start();
+		scriptRetriedMove(server);
+		await expect(
+			adapter.move(path("from"), path("to"), { overwrite: false }),
+		).resolves.toBeUndefined();
+	});
+
+	it("verifies a retried MOVE at concurrency 1 without deadlocking", async () => {
+		const { server, adapter, path } = await start({ concurrency: 1 });
+		scriptRetriedMove(server);
+		const outcome = await Promise.race([
+			adapter
+				.move(path("from"), path("to"), { overwrite: false })
+				.then(() => "done"),
+			sleep(2000).then(() => "deadlock"),
+		]);
+		expect(outcome).toBe("done");
+	});
+
+	it("does not treat a retried MOVE as done while the source still exists", async () => {
+		const { server, adapter, path } = await start();
+		let moves = 0;
+		server.script((req) => {
+			if (req.method !== "MOVE") return undefined;
+			moves++;
+			return moves === 1 ? "destroy" : { status: 412 };
+		});
+		const error = await errorOf(
+			adapter.move(path("from"), path("to"), { overwrite: false }),
+		);
+		expect(error).toMatchObject({ kind: "conflict", op: "move" });
+	});
 });

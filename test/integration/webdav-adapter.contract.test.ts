@@ -1,7 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, inject, it } from "vitest";
 import { StorageError } from "../../src/storage/errors.ts";
 import { buildMounts, type Mounts } from "../../src/storage/mounts.ts";
 import { WebDavAdapter } from "../../src/storage/webdav-adapter.ts";
+import {
+	type ContractSetup,
+	storageAdapterContract,
+} from "../contract/storage-adapter.contract.ts";
 import { STACK } from "./global-setup.ts";
 
 const runId = inject("runId");
@@ -60,3 +65,13 @@ describe("WebDavAdapter against the Compose server (tracer)", () => {
 		});
 	});
 });
+
+// Every case gets a fresh folder created through the adapter itself.
+const setup: ContractSetup = async () => {
+	const mounts = mountsAt(`/run-${runId}/case-${randomUUID()}`);
+	const adapter = newAdapter();
+	await adapter.mkdir(mounts.resolve("t", ""));
+	return { adapter, path: (rel) => mounts.resolve("t", rel) };
+};
+
+storageAdapterContract("webdav", setup);
