@@ -18,6 +18,10 @@ export const STACK = Object.freeze({
 const POLL_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 500;
 
+export function assertLoopback(_urls: string[]): void {
+	// RED stub: never throws. The guard lands in the GREEN commit.
+}
+
 function webdavAuth(): string {
 	const raw = `${STACK.webdavUser}:${STACK.webdavPassword}`;
 	return `Basic ${Buffer.from(raw).toString("base64")}`;
