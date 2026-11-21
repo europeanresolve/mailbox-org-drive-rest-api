@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-08-PLAN.md
-last_updated: "2026-11-21T16:54:25.509Z"
+stopped_at: Completed 01-09-PLAN.md
+last_updated: "2026-11-21T17:00:06.291Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 7e29a4deeb14b9393a583bbe8dd27f2fef488e0d
+state_head: e5d5bc53550477ad01387c4d194e1e76e39fca33
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P07 | 5min | 3 tasks | 6 files |
 | Phase 01 P06 | 11min | 3 tasks | 7 files |
 | Phase 01 P08 | 9min | 3 tasks | 4 files |
+| Phase 01 P09 | 5min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-06]: Exact duplicate config issues collapse; missing-key issues sort at the end of their parent object
 - [Phase 01]: [01-08]: A Retry-After above the 30 s cap gives rate-limited for any retryable response; a PUT 404 is stat-checked and maps to conflict when the target is a folder (hacdias)
 - [Phase 01]: [01-08]: Retried MOVE/DELETE verify with a raw stat inside the held slot, never through run(), so concurrency 1 cannot deadlock
+- [Phase 01]: [01-09]: Every DriveHealth state change logs at warn once; SIGTERM/SIGINT handlers live in the main guard so repeated start() calls leave no listeners; a failed startup closes the Mongo client
 
 ### Pending Todos
 
@@ -111,6 +113,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:54:25.491Z
-Stopped at: Completed 01-08-PLAN.md
+Last session: 2026-11-21T17:00:06.272Z
+Stopped at: Completed 01-09-PLAN.md
 Resume file: None
