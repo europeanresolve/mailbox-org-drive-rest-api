@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-07-PLAN.md
-last_updated: "2026-11-21T16:40:19.229Z"
+stopped_at: Completed 01-06-PLAN.md
+last_updated: "2026-11-21T16:45:07.416Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: c3a3ac588aa8b3c920c5c365409434dd60693e95
+state_head: c915776bda5ebabaf6b123e7a4689fd06733cedb
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P11 | 6min | 2 tasks | 7 files |
 | Phase 01 P03 | 4min | 3 tasks | 5 files |
 | Phase 01 P07 | 5min | 3 tasks | 6 files |
+| Phase 01 P06 | 11min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-03]: Mount issue order is per-mount (name, root) in config order, then one OVERLAP per pair; AT_ROOT means zero segments after the leading slash
 - [Phase 01]: [01-07]: MountView methods are async and write methods check mode before resolving, so a read mount rejects with read-only-mount and zero adapter calls
 - [Phase 01]: [01-07]: Contract suite asserts StorageError.kind only; read returns a Buffer capped by maxBytes (25 MiB default), mkdir is strict
+- [Phase 01]: [01-06]: Config issues name keys by appending them to the instance path (schema.required at /mongo); env issues name the variable
+- [Phase 01]: [01-06]: server.port and server.logLevel are individually optional so defaults and a bare PORT override work
+- [Phase 01]: [01-06]: Exact duplicate config issues collapse; missing-key issues sort at the end of their parent object
 
 ### Pending Todos
 
@@ -104,6 +108,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:40:19.211Z
-Stopped at: Completed 01-07-PLAN.md
+Last session: 2026-11-21T16:45:07.388Z
+Stopped at: Completed 01-06-PLAN.md
 Resume file: None

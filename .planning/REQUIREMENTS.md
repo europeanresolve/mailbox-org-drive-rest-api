@@ -9,7 +9,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 ### Foundation & Operations
 
-- [ ] **FND-01**: Deployer can configure the service from a config file plus environment variables (secrets also via `*_FILE`), and startup fails fast listing every config error
+- [x] **FND-01**: Deployer can configure the service from a config file plus environment variables (secrets also via `*_FILE`), and startup fails fast listing every config error
 - [ ] **FND-02**: Operator can call `/health` (process alive) and `/ready` (MongoDB reachable; Drive outage reported but does not fail readiness)
 - [x] **FND-03**: Operator gets structured pino logs that contain no personal data (route templates not raw URLs, no bodies, no Mongo/Ajv error values), enforced by a CI canary-string test across error paths
 - [ ] **FND-04**: API consumer can read an OpenAPI 3.1 document and UI at `/docs`, including per-collection schemas generated from config
@@ -135,7 +135,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FND-01 | Phase 1 | Pending |
+| FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 1 | Complete |
 | FND-04 | Phase 2 | Pending |
