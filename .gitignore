@@ -1,0 +1,80 @@
+# ---- Dependencies ----
+node_modules/
+.pnpm-store/
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+.npm/
+
+# ---- Build output ----
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ---- Tests & coverage ----
+coverage/
+.nyc_output/
+junit*.xml
+.vitest-cache/
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Secrets & local config (never commit) ----
+.env
+.env.*
+!.env.example
+*.local.yaml
+*.local.yml
+*.local.json
+config/*.yaml
+config/*.yml
+!config/*.example.yaml
+!config/*.example.yml
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+rclone.conf
+**/realm-export*.json
+**/*-realm.json
+
+# ---- Local data (real Drive / DB content must never be committed) ----
+data/
+.data/
+tmp/
+*.dump
+*.bson
+*.archive
+mongo-data/
+# Office files are only allowed as synthetic test fixtures
+*.xlsx
+*.xls
+*.docx
+*.doc
+!test/fixtures/**
+~$*
+
+# ---- Editors & OS ----
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ---- Tooling ----
+.claude/settings.local.json
+.eslintcache
+.turbo/
+.cache/
