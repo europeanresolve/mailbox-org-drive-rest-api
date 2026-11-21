@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Phase 1 context gathered
-last_updated: "2026-11-21T12:52:23.154Z"
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-11-21T16:25:59.922Z"
 last_activity: 2026-11-21
-last_activity_desc: Roadmap created (4 phases, 50/50 v1 requirements mapped)
-state_head: adebc2e798c793126d2f4e7337317a06677eea4d
+last_activity_desc: Phase 01 execution started
+state_head: 3d46e9b831601d15e32108a870d888322ccb3ebe
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** Staff keep working in the Drive they already use, and developers get a safe, fast JSON API on top of it.
-**Current focus:** Phase 1 - Foundations, OX Spike and Storage Layer (milestone v1.0)
+**Current focus:** Phase 01 — Foundations, OX Spike and Storage Layer
 
 ## Current Position
 
-Phase: 01 (Foundations, OX Spike and Storage Layer) — READY TO EXECUTE
-Plan: 0 of TBD in current phase
+Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-11-21 — Roadmap created (4 phases, 50/50 v1 requirements mapped)
+Last activity: 2026-11-21 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 10min | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -63,6 +68,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Forms write path (collections, access/hardening, mirror) ships before read-only content; Kong reference config (SEC-09) rides with Phase 2 hardening
 - [Roadmap]: FND-05 (container roles api/worker/all) lands in Phase 3, when the worker exists; CI image build is Phase 1
 - [Process]: TDD (RED, GREEN, REFACTOR) and trunk-based development on `main`; no phase or milestone branches
+- [Phase 01]: [01-01]: Biome ignores **/*.md (pre-existing README/PROJECT-BRIEF fail biome ci formatting)
+- [Phase 01]: [01-01]: Plain Fastify logger kept until plan 01-04 PII-free harness
 
 ### Pending Todos
 
@@ -86,6 +93,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T11:13:33.992Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-foundations-ox-spike-and-storage-layer/01-CONTEXT.md
+Last session: 2026-11-21T16:25:59.896Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None

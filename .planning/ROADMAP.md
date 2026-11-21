@@ -30,10 +30,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Team can read a written OX App Suite / mailbox.org WebDAV compatibility matrix (ETag stability, If-Match, LOCK, MOVE-over-existing, versioning and trash on overwrite and delete, path encoding of names like `Last, First`) backed by synthetic fixtures
   4. Deployer can allow-list mounts with `read` or `read-write` mode: a path outside a mount or a write to a `read` mount is rejected, and a traversal corpus (`..`, encoded separators, Unicode normalisation) cannot escape a mount
   5. The WebDAV and in-memory `StorageAdapter` implementations both pass one shared contract suite (list, stat, read, write, create folder, move, delete), and the WebDAV adapter retries 429/503/network failures with exponential backoff, never retries 401/403, caps concurrency, and never issues deep PROPFIND traversals
-**Plans:** 12 plans
+**Plans:** 1/12 plans executed
 
 Plans (listed in wave order):
-- [ ] 01-01-PLAN.md — Walking skeleton, part 1: package legitimacy gate, toolchain, `/health` from the container image (wave 1)
+- [x] 01-01-PLAN.md — Walking skeleton, part 1: package legitimacy gate, toolchain, `/health` from the container image (wave 1)
 - [ ] 01-11-PLAN.md — Walking skeleton, part 2: Compose stack, integration project, MongoDB and WebDAV round trips (wave 2)
 - [ ] 01-02-PLAN.md — OX spike: probe script in gitignored `tmp/spike/`, local dry run, human-run probe against mailbox.org (wave 2)
 - [ ] 01-03-PLAN.md — Path safety: `DrivePath`, `Mounts`, branded `ResolvedPath`, traversal corpus (wave 2)
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundations, OX Spike and Storage Layer | 0/12 | Planned | - |
+| 1. Foundations, OX Spike and Storage Layer | 1/12 | In Progress | - |
 | 2. Collections, Access Policy and Anonymous Hardening | 0/TBD | Not started | - |
 | 3. Mirror Worker | 0/TBD | Not started | - |
 | 4. Read-only Content | 0/TBD | Not started | - |

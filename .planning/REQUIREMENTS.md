@@ -18,7 +18,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 ### Developer Experience
 
 - [ ] **DEV-01**: Developer can start a local stack (Docker Compose: MongoDB + local WebDAV server) with one command
-- [ ] **DEV-02**: Developer can run unit tests and integration tests against the local stack; no test touches a real Drive
+- [x] **DEV-02**: Developer can run unit tests and integration tests against the local stack; no test touches a real Drive
 - [ ] **DEV-03**: Every push to `main` runs CI: lint/format, typecheck, unit and integration tests, container image build
 - [ ] **DEV-04**: Planning artefacts, fixtures and examples contain only synthetic data
 
@@ -141,7 +141,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-04 | Phase 2 | Pending |
 | FND-05 | Phase 3 | Pending |
 | DEV-01 | Phase 1 | Pending |
-| DEV-02 | Phase 1 | Pending |
+| DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 1 | Pending |
 | DEV-04 | Phase 1 | Pending |
 | STOR-01 | Phase 1 | Pending |
