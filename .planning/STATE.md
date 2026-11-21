@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 01
 current_phase_name: Foundations, OX Spike and Storage Layer
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-11-21T16:25:59.922Z"
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-11-21T16:29:32.050Z"
 last_activity: 2026-11-21
 last_activity_desc: Phase 01 execution started
-state_head: 3d46e9b831601d15e32108a870d888322ccb3ebe
+state_head: bcc093ba77cf5a7a840f748bd664524518c6769b
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 12
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 01 (Foundations, OX Spike and Storage Layer) — EXECUTING
-Plan: 2 of 12
+Plan: 3 of 12
 Status: Ready to execute
 Last activity: 2026-11-21 — Phase 01 execution started
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 10min | 2 tasks | 11 files |
+| Phase 01 P04 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting current work:
 - [Process]: TDD (RED, GREEN, REFACTOR) and trunk-based development on `main`; no phase or milestone branches
 - [Phase 01]: [01-01]: Biome ignores **/*.md (pre-existing README/PROJECT-BRIEF fail biome ci formatting)
 - [Phase 01]: [01-01]: Plain Fastify logger kept until plan 01-04 PII-free harness
+- [Phase 01]: [01-04]: Fastify err serializer cast with 'as never' because typings require message/stack; allow-list omits them
+- [Phase 01]: [01-04]: text/plain bodies return 400 (default parser + schema), 415 only for unparsed types like application/xml
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-21T16:25:59.896Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-11-21T16:29:32.030Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
