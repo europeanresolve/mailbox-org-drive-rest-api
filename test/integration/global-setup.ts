@@ -18,8 +18,23 @@ export const STACK = Object.freeze({
 const POLL_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 500;
 
-export function assertLoopback(_urls: string[]): void {
-	// RED stub: never throws. The guard lands in the GREEN commit.
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+
+export function assertLoopback(urls: string[]): void {
+	for (const raw of urls) {
+		let hostname: string | undefined;
+		try {
+			hostname = new URL(raw).hostname;
+		} catch {
+			hostname = undefined;
+		}
+		if (hostname === undefined || !LOOPBACK_HOSTS.has(hostname)) {
+			// The URL itself is not echoed: it may carry credentials.
+			throw new Error(
+				"integration tests only run against the local Compose stack",
+			);
+		}
+	}
 }
 
 function webdavAuth(): string {
@@ -61,13 +76,19 @@ async function waitForStack(): Promise<void> {
 		const [mongo, webdav] = await Promise.all([mongoUp(), webdavUp()]);
 		if (mongo && webdav) return;
 		if (Date.now() >= deadline) {
-			throw new Error("integration stack did not become ready within 10 s");
+			const down = [mongo ? null : "MongoDB", webdav ? null : "WebDAV"].filter(
+				Boolean,
+			);
+			throw new Error(
+				`integration stack not reachable after 10 s: ${down.join(" and ")} unreachable. Run pnpm stack:up and retry.`,
+			);
 		}
 		await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
 	}
 }
 
 export default async function setup(project: TestProject) {
+	assertLoopback([STACK.mongoUri, STACK.webdavUrl]);
 	await waitForStack();
 
 	const runId = randomUUID();
