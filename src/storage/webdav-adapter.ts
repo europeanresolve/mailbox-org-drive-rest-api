@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import pLimit from "p-limit";
 import pRetry from "p-retry";
 import { createClient, type FileStat, type WebDAVClient } from "webdav";
@@ -32,6 +33,8 @@ const DEFAULTS = {
 	maxRetryTime: 60_000,
 	metaMs: 15_000,
 	dataMs: 60_000,
+	cooldownMs: 60_000,
+	maxRetryAfterMs: 30_000,
 } as const;
 
 const CLIENT_BODY_CAP = 64 * 1024 * 1024;
@@ -65,12 +68,15 @@ class Failure extends Error {
 	readonly retryable: boolean;
 	/** True when the request may or may not have reached the server. */
 	readonly network: boolean;
+	/** Server-requested wait before a retry, when it sent Retry-After. */
+	readonly retryAfterMs: number | undefined;
 
 	constructor(
 		kind: StorageErrorKind,
 		status: number | undefined,
 		retryable: boolean,
 		network: boolean,
+		retryAfterMs?: number,
 	) {
 		super("webdav attempt failed");
 		this.name = "Failure";
@@ -78,7 +84,24 @@ class Failure extends Error {
 		this.status = status;
 		this.retryable = retryable;
 		this.network = network;
+		this.retryAfterMs = retryAfterMs;
 	}
+}
+
+/** Retry-After as delta-seconds or an HTTP date, in ms; undefined when absent or invalid. */
+function retryAfterOf(raw: unknown): number | undefined {
+	if (typeof raw !== "object" || raw === null) return undefined;
+	const headers = (raw as { response?: { headers?: { get?: unknown } } })
+		.response?.headers;
+	if (typeof headers?.get !== "function") return undefined;
+	const value = (headers as { get(name: string): string | null }).get(
+		"retry-after",
+	);
+	if (value === null) return undefined;
+	const text = value.trim();
+	if (/^\d+$/.test(text)) return Number(text) * 1000;
+	const date = Date.parse(text);
+	return Number.isNaN(date) ? undefined : Math.max(0, date - Date.now());
 }
 
 function statusOf(raw: unknown): number | undefined {
@@ -114,11 +137,23 @@ function classify(raw: unknown, signal: AbortSignal): Failure {
 			case 507:
 				return new Failure("insufficient-storage", status, false, false);
 			case 429:
-				return new Failure("rate-limited", status, true, false);
+				return new Failure(
+					"rate-limited",
+					status,
+					true,
+					false,
+					retryAfterOf(raw),
+				);
 			case 502:
 			case 503:
 			case 504:
-				return new Failure("unavailable", status, true, false);
+				return new Failure(
+					"unavailable",
+					status,
+					true,
+					false,
+					retryAfterOf(raw),
+				);
 			default:
 				return new Failure("unavailable", status, false, false);
 		}
@@ -160,6 +195,9 @@ export class WebDavAdapter implements StorageAdapter {
 	};
 	readonly #metaMs: number;
 	readonly #dataMs: number;
+	readonly #cooldownMs: number;
+	readonly #maxRetryAfterMs: number;
+	#cooldownUntil = 0;
 
 	constructor(options: WebDavAdapterOptions) {
 		this.#client = createClient(options.url, {
@@ -181,6 +219,15 @@ export class WebDavAdapter implements StorageAdapter {
 		};
 		this.#metaMs = options.timeouts?.metaMs ?? DEFAULTS.metaMs;
 		this.#dataMs = options.timeouts?.dataMs ?? DEFAULTS.dataMs;
+		this.#cooldownMs = options.cooldownMs ?? DEFAULTS.cooldownMs;
+		this.#maxRetryAfterMs = options.maxRetryAfterMs ?? DEFAULTS.maxRetryAfterMs;
+	}
+
+	/** After a 401 no request is sent until the cooldown ends (T-01-23). */
+	#assertNotCoolingDown(op: string): void {
+		if (Date.now() < this.#cooldownUntil) {
+			throw new StorageError("unauthorized", op, 401);
+		}
 	}
 
 	/** One raw client call with its own timeout; any failure becomes a Failure. */
@@ -192,25 +239,48 @@ export class WebDavAdapter implements StorageAdapter {
 		try {
 			return await fn(signal);
 		} catch (raw) {
-			throw classify(raw, signal);
+			const failure = classify(raw, signal);
+			if (failure.kind === "unauthorized") {
+				this.#cooldownUntil = Date.now() + this.#cooldownMs;
+			}
+			throw failure;
 		}
 	}
 
 	/** limit(() => pRetry(...)): the slot is held across retries and backoff. */
 	#run<T>(op: string, attempt: () => Promise<T>): Promise<T> {
+		this.#assertNotCoolingDown(op);
+		const cap = this.#maxRetryAfterMs;
 		return this.#limit(async () => {
 			try {
+				// A call queued behind a 401 must not send its request either.
+				this.#assertNotCoolingDown(op);
 				return await pRetry(attempt, {
 					...this.#retry,
 					factor: 2,
 					randomize: true,
 					shouldRetry: ({ error }) =>
-						error instanceof Failure && error.retryable,
+						error instanceof Failure &&
+						error.retryable &&
+						(error.retryAfterMs ?? 0) <= cap,
+					// Wait out Retry-After inside the slot, but never beyond the cap.
+					onFailedAttempt: async ({ error, retryDelay }) => {
+						if (!(error instanceof Failure) || !error.retryable) return;
+						const wanted = error.retryAfterMs;
+						if (wanted === undefined || wanted > cap || retryDelay === 0)
+							return;
+						if (wanted > retryDelay) await sleep(wanted - retryDelay);
+					},
 				});
 			} catch (error) {
 				if (error instanceof StorageError) throw error;
 				if (error instanceof Failure) {
-					throw new StorageError(error.kind, op, error.status);
+					// A Retry-After above the cap is not held: the caller sees rate-limited.
+					const kind =
+						error.retryable && (error.retryAfterMs ?? 0) > cap
+							? "rate-limited"
+							: error.kind;
+					throw new StorageError(kind, op, error.status);
 				}
 				throw new StorageError("unavailable", op);
 			}
