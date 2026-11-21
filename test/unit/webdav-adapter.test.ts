@@ -318,6 +318,28 @@ describe("WebDavAdapter semantic rules", () => {
 		expect(server.requests.some((r) => r.method === "GET")).toBe(false);
 	});
 
+	it("classifies a PUT that fails with 404 over an existing folder as conflict", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) => {
+			if (req.method === "PUT") return { status: 404 };
+			if (req.method === "PROPFIND") return propfindReply(req.path, "dir");
+			return undefined;
+		});
+		const error = await errorOf(adapter.write(path("d"), Buffer.from("x")));
+		expect(error).toMatchObject({ kind: "conflict", op: "write", status: 404 });
+	});
+
+	it("keeps not-found for a PUT 404 when the target is not a folder", async () => {
+		const { server, adapter, path } = await start();
+		server.script((req) => {
+			if (req.method === "PUT") return { status: 404 };
+			if (req.method === "PROPFIND") return { status: 404 };
+			return undefined;
+		});
+		const error = await errorOf(adapter.write(path("f.txt"), Buffer.from("x")));
+		expect(error).toMatchObject({ kind: "not-found", op: "write" });
+	});
+
 	it("rejects a file above maxBytes with too-large before downloading it", async () => {
 		const { server, adapter, path } = await start();
 		const error = await errorOf(adapter.read(path("f.txt"), { maxBytes: 4 }));
