@@ -21,8 +21,8 @@ export const ConfigSchema = Type.Object(
 			Type.Object(
 				{
 					// 0 = ephemeral port, used by tests.
-					port: Type.Integer({ minimum: 0, maximum: 65535 }),
-					logLevel: Type.Enum([...LOG_LEVELS]),
+					port: Type.Optional(Type.Integer({ minimum: 0, maximum: 65535 })),
+					logLevel: Type.Optional(Type.Enum([...LOG_LEVELS])),
 				},
 				{ additionalProperties: false },
 			),
