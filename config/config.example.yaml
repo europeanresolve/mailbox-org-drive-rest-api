@@ -1,0 +1,33 @@
+# Example configuration. Copy to config/config.yaml (git-ignored) and adjust.
+# Point the service at it with CONFIG_FILE (default: config/config.yaml).
+#
+# Any ${NAME} placeholder resolves from the environment variable NAME, or from
+# the file named by NAME_FILE (for Docker/Kubernetes secrets). Setting both, or
+# neither, is a startup error. Startup failures list every problem at once and
+# never print a config value.
+
+storage:
+  webdav:
+    url: ${WEBDAV_URL}
+    username: ${WEBDAV_USERNAME}
+    password: ${WEBDAV_APP_PASSWORD}
+    # concurrency: 2        # optional, 1 to 4 parallel WebDAV requests
+
+mongo:
+  uri: ${MONGO_URI}
+
+# Optional. PORT and LOG_LEVEL in the environment override these two values.
+# server:
+#   port: 3000
+#   logLevel: info          # fatal, error, warn, info, debug, trace or silent
+
+# Mount names appear in API URLs. The real Drive paths below never appear in
+# URLs or logs. Names: lowercase letters, digits and "-", starting with a letter.
+# Read-write mounts must not overlap another mount, and none may be the Drive root.
+mounts:
+  forms:
+    path: /Userstore/Example Service/forms
+    mode: read-write
+  content:
+    path: /Userstore/Example Service/content
+    mode: read
