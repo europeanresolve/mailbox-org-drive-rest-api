@@ -1,6 +1,6 @@
-import { MongoClient } from "mongodb";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app.ts";
+import { createMongo } from "../../src/db/mongo.ts";
 import { STACK } from "./global-setup.ts";
 
 const clients: { close(): Promise<void> }[] = [];
@@ -9,15 +9,8 @@ afterAll(async () => {
 	await Promise.all(clients.map((client) => client.close()));
 });
 
-// RED stand-in for createMongo (src/db/mongo.ts does not exist yet).
 function mongoAt(uri: string) {
-	const client = new MongoClient(uri, { serverSelectionTimeoutMS: 1500 });
-	const mongo = {
-		ping: async () => {
-			await client.db("admin").command({ ping: 1 });
-		},
-		close: () => client.close(),
-	};
+	const mongo = createMongo(uri);
 	clients.push(mongo);
 	return mongo;
 }

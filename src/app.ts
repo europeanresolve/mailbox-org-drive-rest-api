@@ -1,10 +1,12 @@
 import Fastify, { type FastifyInstance, LogController } from "fastify";
 import type { DestinationStream } from "pino";
+import { type ReadinessChecks, registerHealthRoutes } from "./http/health.ts";
 import { loggerOptions, registerLogging } from "./http/logging.ts";
 
-// Later plans extend this with `checks`.
 export interface AppOptions {
 	logger?: { level?: string; stream?: DestinationStream };
+	/** Without checks only /health is registered. */
+	checks?: ReadinessChecks;
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -16,6 +18,6 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		requestIdHeader: false,
 	});
 	registerLogging(app);
-	app.get("/health", async () => ({ status: "ok" }));
+	registerHealthRoutes(app, options.checks);
 	return app;
 }
