@@ -21,13 +21,64 @@ export type WritableMount = Omit<ReadableMount, "mode"> & {
 	delete(rel: string): Promise<void>;
 };
 
-export type MountView = ReadableMount | WritableMount;
+/**
+ * One class backs both mount types. Every relative path goes through
+ * `mounts.resolve` before any adapter call, so path errors surface first.
+ */
+export class MountView {
+	readonly name: string;
+	readonly mode: "read" | "read-write";
+	readonly #mounts: Mounts;
+	readonly #adapter: StorageAdapter;
 
-// RED stub: implemented in the GREEN commit.
+	constructor(mounts: Mounts, adapter: StorageAdapter, name: string) {
+		this.#mounts = mounts;
+		this.#adapter = adapter;
+		this.name = name;
+		this.mode = mounts.get(name).mode;
+	}
+
+	list(rel: string): Promise<StatEntry[]> {
+		return this.#adapter.list(this.#mounts.resolve(this.name, rel));
+	}
+
+	stat(rel: string): Promise<StatEntry> {
+		return this.#adapter.stat(this.#mounts.resolve(this.name, rel));
+	}
+
+	read(rel: string, opts?: ReadOptions): Promise<Buffer> {
+		return this.#adapter.read(this.#mounts.resolve(this.name, rel), opts);
+	}
+
+	write(rel: string, body: Buffer): Promise<StatEntry> {
+		return this.#adapter.write(this.#mounts.resolve(this.name, rel), body);
+	}
+
+	mkdir(rel: string): Promise<void> {
+		return this.#adapter.mkdir(this.#mounts.resolve(this.name, rel));
+	}
+
+	move(
+		fromRel: string,
+		toRel: string,
+		opts: { overwrite: boolean },
+	): Promise<void> {
+		return this.#adapter.move(
+			this.#mounts.resolve(this.name, fromRel),
+			this.#mounts.resolve(this.name, toRel),
+			opts,
+		);
+	}
+
+	delete(rel: string): Promise<void> {
+		return this.#adapter.delete(this.#mounts.resolve(this.name, rel));
+	}
+}
+
 export function openMount(
-	_mounts: Mounts,
-	_adapter: StorageAdapter,
-	_name: string,
+	mounts: Mounts,
+	adapter: StorageAdapter,
+	name: string,
 ): ReadableMount | WritableMount {
-	throw new Error("not implemented");
+	return new MountView(mounts, adapter, name) as ReadableMount | WritableMount;
 }
