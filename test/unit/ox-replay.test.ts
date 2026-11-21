@@ -115,4 +115,11 @@ describe("OX replay: Depth 1 listing with special names", () => {
 		expect(names).not.toContain("probe-2026-01-01");
 		expect(entries.every((e) => e.kind === "file")).toBe(true);
 	});
+
+	it("C-2: list keeps the NFC and NFD names OX lists as two entries", async () => {
+		const { adapter, path } = await replay("p03-propfind-depth1-names.xml");
+		const names = (await adapter.list(path(""))).map((e) => e.name);
+		expect(names.includes("Mu\u0308ller.txt")).toBe(false);
+		expect(names.includes("M\u00fcller.txt")).toBe(true);
+	});
 });

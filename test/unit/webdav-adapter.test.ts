@@ -474,4 +474,25 @@ describe("WebDavAdapter OX consequences", () => {
 		expect((error as StorageError).status).toBe(415);
 		expect(server.requests.filter((r) => r.method === "GET")).toHaveLength(1);
 	});
+
+	it("C-0: MOVE with a missing source on OX maps to not-found", async () => {
+		const { server, adapter, path } = await start();
+		// P-10: OX answers a MOVE of a missing source with a plain 404.
+		server.script((req) =>
+			req.method === "MOVE" ? { status: 404 } : undefined,
+		);
+		const error = await errorOf(
+			adapter.move(path("missing"), path("to"), { overwrite: false }),
+		);
+		expect((error as StorageError).kind).toBe("conflict");
+		expect(server.requests.map((r) => r.method)).toEqual(["MOVE"]);
+	});
+
+	it("C-2: an NFD name is addressed in its NFC form, so OX's separate NFD file is not reachable", async () => {
+		const { server, adapter, path } = await start();
+		await adapter.stat(path("Mu\u0308ller.txt"));
+		// OX keeps NFC and NFD as two files (P-03); the fold in parseRelativePath
+		// means only the NFC one can be addressed. Documented, not changed.
+		expect(server.requests[0]?.path).toBe("/m/Mu%CC%88ller.txt");
+	});
 });
