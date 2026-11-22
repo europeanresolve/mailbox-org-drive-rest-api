@@ -49,7 +49,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
 - [x] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
 - [x] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
-- [ ] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
+- [x] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
 - [x] **SEC-09**: Repository provides a Kong reference gateway config in `deploy/` (rate limiting, logging of method/route/status only)
 
 ### Spreadsheet Mirror
@@ -164,7 +164,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-05 | Phase 2 | Complete |
 | SEC-06 | Phase 2 | Complete |
 | SEC-07 | Phase 2 | Dropped |
-| SEC-08 | Phase 2 | Pending |
+| SEC-08 | Phase 2 | Complete |
 | SEC-09 | Phase 2 | Complete |
 | MIRR-01 | Phase 3 | Pending |
 | MIRR-02 | Phase 3 | Pending |

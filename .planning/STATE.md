@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-11-22T11:01:08.871Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-11-22T11:06:31.911Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: c0a959b410293f7af4ce63986c223fa79267e252
+state_head: 2b7a7311a481b9246f8c78d4fb498297153a5f4c
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 7 of 8
+Plan: 8 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P04 | 8min | 2 tasks | 7 files |
 | Phase 02 P05 | 14min | 2 tasks | 15 files |
 | Phase 02 P06 | 12min | 2 tasks | 8 files |
+| Phase 02 P07 | 10min | 1 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -119,6 +120,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-06: 415 media-type hook runs after credentials and the rate limiter, so an unauthenticated caller gets 401, never a media-type hint
 - [Phase 02]: 02-06: UNBOUNDED_STRING walks every subschema (incl. $defs); enum/const strings count as bounded
 - [Phase 02]: 02-06: real and honeypot anonymous creates share one reply function (anonymousCreated) so status, ETag and body cannot drift
+- [Phase 02]: 02-07: Idempotency-Key is handled in the create handler after honeypot and validation, so refusals, 400s and fake 201s write no entry; record id is chosen with the pending entry so stale-lock takeover cannot duplicate
 
 ### Pending Todos
 
@@ -142,6 +144,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T11:01:08.847Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-11-22T11:06:31.883Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
