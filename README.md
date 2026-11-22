@@ -10,7 +10,7 @@ A self-hostable REST API that puts a **mailbox.org Drive** (or another WebDAV st
 
 > **Unofficial project.** Not affiliated with, endorsed by or supported by mailbox.org / Heinlein Support GmbH or Open-Xchange. "mailbox.org" is used only to describe compatibility.
 
-> **Status: pre-alpha / planning.** Nothing here is usable yet. Everything below describes the intended design and may change. Planning artefacts live in [`.planning/`](.planning/).
+> **Status: pre-alpha.** Collections with API keys and hardened anonymous form submission work; the `.xlsx` mirror, sheets, documents and files below are still planned. Anything marked planned may change. Planning artefacts live in [`.planning/`](.planning/).
 
 ---
 
@@ -51,14 +51,19 @@ Why MongoDB in front of the Drive: WebDAV has no transactions, so two writers up
 - **Sheet** — a named `.xlsx` file (and worksheet) on a mount, exposed as JSON rows.
 - **Access policy** — per collection and per operation: `anonymous`, `apiKey` or `oidc` (OIDC arrives in a later milestone).
 
-### Example configuration (illustrative only)
+### Example configuration
+
+A complete, loadable example with every collection key is [`config/config.example.yaml`](config/config.example.yaml). In short:
 
 ```yaml
 storage:
   webdav:
-    url: https://dav.mailbox.org/servlet/webdav.infostore/
+    url: ${WEBDAV_URL}
     username: ${WEBDAV_USERNAME}
     password: ${WEBDAV_APP_PASSWORD}
+
+mongo:
+  uri: ${MONGO_URI}
 
 mounts:
   forms:   { path: "/Userstore/Example Service/forms",   mode: read-write }
@@ -66,30 +71,108 @@ mounts:
 
 collections:
   contact:
-    schema: ./schemas/contact.schema.json
-    access: { create: anonymous, read: apiKey, update: apiKey, delete: apiKey }
-    mirror: { mount: forms, path: contact/responses.xlsx }
+    schema: { $ref: contact.schema.json }   # or an inline JSON Schema
+    operations: { create: anonymous, list: apiKey, get: apiKey, delete: apiKey }
+    indexes: [topic]                        # fields list may filter and sort on
+    honeypot: website                       # hidden form field that only bots fill
+    cors: { origins: ["https://www.example.org"] }
+    rateLimit: { max: 10, windowSeconds: 60 }
+    bodyLimit: 16384
 
-sheets:
-  articles: { mount: content, path: articles.xlsx, worksheet: Articles }
+apiKeys:
+  - name: website-backend
+    hash: "<output of pnpm keygen>"
+    grants: ["contact:list", "contact:get", "contact:delete"]
 ```
 
-### Endpoint sketch (planned, v1)
+The `.xlsx` mirror of a collection and the sheets, documents and files endpoints are planned for later phases and are not in the config yet:
 
 ```
-GET    /health
-POST   /v1/collections/{collection}/records
-GET    /v1/collections/{collection}/records
-GET    /v1/collections/{collection}/records/{id}
-PUT    /v1/collections/{collection}/records/{id}
-PATCH  /v1/collections/{collection}/records/{id}
-DELETE /v1/collections/{collection}/records/{id}
-GET    /v1/sheets/{sheet}
-GET    /v1/documents/{mount}/{path}.md
-GET    /v1/files/{mount}/{path}
+GET /v1/sheets/{sheet}                 (planned)
+GET /v1/documents/{mount}/{path}.md    (planned)
+GET /v1/files/{mount}/{path}           (planned)
 ```
 
-An OpenAPI description will be generated from the code and served at `/docs`.
+## Collections
+
+A collection is a set of JSON records defined entirely in config. Startup fails, with every problem listed at once, if a definition is invalid. Each operation has a policy, `anonymous` or `apiKey`; an operation that is not listed does not exist and answers `404`.
+
+> **Warning: `get: anonymous` or `list: anonymous` exposes every record to anyone who can reach the API.** Records from a contact form are personal data. Use `anonymous` for `create` only, unless the records are meant to be public.
+
+### Routes
+
+| Operation | Route | Success |
+|-----------|-------|---------|
+| `create` | `POST /v1/{name}` | `201`, `ETag` |
+| `list` | `GET /v1/{name}` | `200`, `{ items, nextCursor }` |
+| `get` | `GET /v1/{name}/{id}` | `200`, `ETag` |
+| `replace` | `PUT /v1/{name}/{id}` | `200`, `ETag` |
+| `patch` | `PATCH /v1/{name}/{id}` (`application/merge-patch+json`) | `200`, `ETag` |
+| `delete` | `DELETE /v1/{name}/{id}` | `204` |
+
+A record is `{ ...your fields, id, createdAt, updatedAt }`. The `id` is a server-generated UUID. An anonymous `create` answers only `{ id, createdAt }`, so a visitor never sees fields they did not send. Bodies must be `application/json`; every body is validated against the collection's JSON Schema and is never coerced, stripped or defaulted. `PUT` replaces the whole record; `PATCH` applies an RFC 7396 merge patch and validates the merged result.
+
+### Status codes
+
+Every error is `application/problem+json` with fixed text. A `400` lists JSON Schema keywords and pointers to declared fields, never a submitted value.
+
+| Status | When |
+|--------|------|
+| `400` | The body or the list query is invalid |
+| `401` | A key is required and missing or unknown |
+| `403` | The key lacks the grant (`<collection>:<operation>`), or the `Origin` is not on the collection's `cors.origins` |
+| `404` | No such record, route or operation |
+| `409` | An `Idempotency-Key` request is still in flight, or a `PATCH` kept losing a race with another writer |
+| `412` | `If-Match` does not match the record's current version |
+| `413` | The body is over the collection's `bodyLimit` |
+| `415` | The `Content-Type` is not the one the operation takes |
+| `422` | An `Idempotency-Key` was used before with another body or another API key |
+| `429` | The per-IP rate limit of an anonymous operation is spent; see `Retry-After` |
+
+### List, filters and paging
+
+`GET /v1/{name}` returns `{ items, nextCursor }`, newest first.
+
+- Filter on `createdAt`, `updatedAt` and the fields in `indexes`: `?topic=billing`, or a range with `.gt`, `.gte`, `.lt`, `.lte`: `?createdAt.gte=2026-11-01`. Dates are ISO 8601, a day or a date-time with a zone. A key may appear once.
+- Order with `sort=topic` or `sort=-createdAt` (the default). Only the filterable fields can be sorted on.
+- Page with `limit` (1 to 200, default 50) and `cursor`: pass the previous `nextCursor` until it is `null`. A cursor only works with the sort it came from.
+- An unknown parameter, a filter on a field that is not indexed, or a malformed value gives `400`.
+
+### If-Match
+
+A `create`, `get`, `replace` or `patch` response sets an `ETag` holding the record's version, such as `"3"`. Send it back as `If-Match` on `PUT` or `PATCH` to change the record only if nobody else has: a stale version gives `412` and changes nothing. `If-Match: *` matches any existing record. A weak, unquoted or malformed value never matches, so it gives `412` rather than overwriting. Without the header, a `PUT` is last-writer-wins.
+
+### Idempotency-Key
+
+Send an `Idempotency-Key` header (1 to 255 visible ASCII characters, for example a random UUID) on `POST` so a retry after a timeout cannot store a record twice:
+
+- the same key and body returns the original status, `ETag` and body, and stores nothing new;
+- the same key with another body, or from another API key, gives `422`;
+- a retry while the first request is still running gives `409`; try again in a moment;
+- keys are scoped to a collection and kept for 24 hours; deleting a record also deletes the key entry that holds its data;
+- the key is stored only as a hash and is never logged.
+
+The header is ignored on every other operation.
+
+### Honeypot
+
+Add a hidden field to the form (`display: none`, no autocomplete) and name it in `honeypot`. People never fill it; bots do. A submission with that field filled gets a normal-looking `201` with a made-up `id` and nothing is stored. An empty value is accepted and dropped. The field must not appear in the schema.
+
+### API keys
+
+```sh
+pnpm keygen              # in the container image: node dist/keygen.js
+# key: mdra_...          give to the caller, shown once, stored nowhere
+# hash: 3f9a...          paste into apiKeys[].hash in the config
+```
+
+Callers send `Authorization: Bearer <key>`. Only the SHA-256 hash is in the config, compared in constant time. List two entries in `apiKeys` while rotating, then remove the old one. Grants are exact `<collection>:<operation>` pairs without wildcards, and an operation with no grant is denied.
+
+### OpenAPI document and UI
+
+Set `server.docs: true` to serve an OpenAPI 3.1 document at `/docs/json` and an interactive UI at `/docs`. The document is generated from the config, so it lists exactly the collections and operations this deployment allows, with each collection's schema, the `Idempotency-Key` and `If-Match` headers and the problem responses. The UI's assets are served by the API itself; nothing loads from a CDN.
+
+It is **off by default**: the document reveals collection names and schemas to anyone who can reach `/docs`. Turn it on for development, or in production restrict the `docs` route at the gateway (see [`deploy/kong.yml`](deploy/kong.yml)).
 
 ## Security model
 
