@@ -91,6 +91,20 @@ async function list(
 	};
 }
 
+async function walk(query: string): Promise<string[]> {
+	const ids: string[] = [];
+	let cursor: string | null = null;
+	for (let guard = 0; guard < 20; guard++) {
+		const suffix: string = cursor === null ? "" : `&cursor=${cursor}`;
+		const { res, page } = await list(`${query}${suffix}`);
+		expect(res.status).toBe(200);
+		ids.push(...page.items.map((item) => item.id));
+		if (page.nextCursor === null) return ids;
+		cursor = page.nextCursor;
+	}
+	return expect.fail("paging did not terminate");
+}
+
 async function reset() {
 	await app.db.collection("records_ticket").deleteMany({});
 }
@@ -218,5 +232,121 @@ describe("GET /v1/{name}: rejected queries", () => {
 		for (const line of app.logs.lines()) {
 			expect(line).not.toMatch(/nickname|canary-7f3a/i);
 		}
+	});
+});
+
+describe("GET /v1/{name}: range filters and sort", () => {
+	it("returns exactly the records inside a half-open range", async () => {
+		await reset();
+		for (const priority of [1, 2, 3, 4, 5]) await create({ priority });
+		const { page } = await list("priority.gte=2&priority.lt=4&sort=priority");
+		expect(page.items.map((item) => item.priority).join()).toBe("2,3");
+	});
+
+	it("filters on createdAt with a date", async () => {
+		await reset();
+		await create();
+		const none = await list("createdAt.lt=2020-01-01");
+		expect(none.page.items).toHaveLength(0);
+		const all = await list("createdAt.gte=2020-01-01");
+		expect(all.page.items).toHaveLength(1);
+	});
+
+	it("walks every record once in (priority, _id) order, ties included, and back in reverse", async () => {
+		await reset();
+		const made: { id: string; priority: number }[] = [];
+		for (const priority of [3, 1, 2, 2, 3, 1, 2]) {
+			made.push({ id: await create({ priority }), priority });
+		}
+		const ascending = [...made]
+			.sort((a, b) => a.priority - b.priority || (a.id < b.id ? -1 : 1))
+			.map((m) => m.id);
+
+		expect((await walk("sort=priority&limit=2")).join()).toBe(ascending.join());
+		expect((await walk("sort=-priority&limit=2")).join()).toBe(
+			[...ascending].reverse().join(),
+		);
+	});
+
+	it("keeps the filter while paging a sorted list", async () => {
+		await reset();
+		for (const status of [
+			"new",
+			"done",
+			"new",
+			"new",
+			"done",
+			"new",
+		] as const) {
+			await create({ status });
+		}
+		const ids = await walk("status=new&sort=status&limit=3");
+		expect(ids).toHaveLength(4);
+	});
+});
+
+describe("GET /v1/{name}: hostile queries", () => {
+	const CANARY = "CANARY-7f3a@example.invalid";
+
+	it("answers 400 for each bad parameter and never echoes it in the body or a log line", async () => {
+		await reset();
+		await create();
+		const asCursor = Buffer.from(
+			JSON.stringify({ s: CANARY, v: CANARY, id: CANARY }),
+		).toString("base64url");
+		const queries = [
+			`priority=${encodeURIComponent(CANARY)}`,
+			`${encodeURIComponent(CANARY)}=1`,
+			`status.${encodeURIComponent(CANARY)}=1`,
+			`cursor=${encodeURIComponent(CANARY)}`,
+			`cursor=${asCursor}`,
+			`sort=${encodeURIComponent(CANARY)}`,
+			`limit=${encodeURIComponent(CANARY)}`,
+			`status=${encodeURIComponent(CANARY)}&status=${encodeURIComponent(CANARY)}`,
+			`status[$ne]=${encodeURIComponent(CANARY)}`,
+		];
+		for (const query of queries) {
+			const { res, text } = await list(query);
+			expect(res.status).toBe(400);
+			expect(res.headers.get("content-type")).toContain(
+				"application/problem+json",
+			);
+			expect(text).not.toMatch(/canary-7f3a|example\.invalid/i);
+		}
+		for (const line of app.logs.lines()) {
+			expect(line).not.toMatch(/canary-7f3a|example\.invalid/i);
+		}
+		const routes = app.logs
+			.lines()
+			.map(
+				(line) =>
+					JSON.parse(line) as { msg?: string; req?: { route?: string } },
+			)
+			.filter(
+				(entry) =>
+					entry.msg === "request" && entry.req?.route?.startsWith("/v1/ticket"),
+			)
+			.map((entry) => entry.req?.route);
+		expect(routes.length).toBeGreaterThan(0);
+		for (const route of routes) expect(route).toBe("/v1/ticket");
+	});
+
+	it("answers 400 for a tampered cursor that carries an operator object", async () => {
+		await reset();
+		for (let i = 0; i < 3; i++) await create();
+		const first = await list("limit=1");
+		const tampered = Buffer.from(
+			JSON.stringify({ s: "-createdAt", v: { $gt: "" }, id: "x" }),
+		).toString("base64url");
+		expect(first.page.nextCursor).not.toBeNull();
+		const res = await list(`limit=1&cursor=${tampered}`);
+		expect(res.res.status).toBe(400);
+	});
+
+	it("accepts limit 1 and 200 and rejects 0 and 201", async () => {
+		expect((await list("limit=1")).res.status).toBe(200);
+		expect((await list("limit=200")).res.status).toBe(200);
+		expect((await list("limit=0")).res.status).toBe(400);
+		expect((await list("limit=201")).res.status).toBe(400);
 	});
 });
