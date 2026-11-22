@@ -68,6 +68,15 @@ const OPERATION_METHOD = {
 const etag = (version: number): string => `"${version}"`;
 
 /**
+ * The only reply an anonymous create ever sends, real or honeypot: one function sets
+ * status, ETag and body, so the two cannot drift apart. A new record is version 1.
+ */
+function anonymousCreated(reply: FastifyReply, id: string, createdAt: string) {
+	reply.status(201).header("etag", etag(1));
+	return { id, createdAt };
+}
+
+/**
  * One encapsulated plugin per collection at /v1/{name} (D-15). An operation with
  * no policy is never registered, so it answers the normal 404 (D-03).
  */
@@ -144,11 +153,11 @@ export function registerCollections(
 								// Before validation, so a bot learns nothing from a 400 and the
 								// path writes and logs nothing (D-08). A key does not skip it (D-05).
 								if (honeypotFilled(body, honeypot)) {
-									reply.status(201).header("etag", etag(1));
-									return {
-										id: randomUUID(),
-										createdAt: new Date().toISOString(),
-									};
+									return anonymousCreated(
+										reply,
+										randomUUID(),
+										new Date().toISOString(),
+									);
 								}
 								// The one stripping exception: an empty or null honeypot.
 								if (isPlainObject(body)) delete body[honeypot];
@@ -162,10 +171,11 @@ export function registerCollections(
 								return reject(reply, 400, errors ?? []);
 							}
 							const created = await store.insert(name, body);
+							if (policy === "anonymous") {
+								return anonymousCreated(reply, created._id, created.createdAt);
+							}
 							reply.status(201).header("etag", etag(created._v));
-							return policy === "anonymous"
-								? { id: created._id, createdAt: created.createdAt }
-								: toRecord(created);
+							return toRecord(created);
 						},
 					);
 				}
