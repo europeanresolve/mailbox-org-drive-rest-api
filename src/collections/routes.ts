@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Db } from "mongodb";
 import {
 	ConfigKeyStore,
@@ -7,6 +7,7 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
+import { parseIfMatch } from "./if-match.ts";
 import {
 	encodeCursor,
 	ListQueryError,
@@ -31,6 +32,12 @@ function toRecord(document: RecordDocument): Record<string, unknown> {
 }
 
 const etag = (version: number): string => `"${version}"`;
+
+/** The media type without parameters, lower-cased; "" when the header is absent. */
+function mediaType(request: FastifyRequest): string {
+	const [type = ""] = (request.headers["content-type"] ?? "").split(";");
+	return type.trim().toLowerCase();
+}
 
 /**
  * One encapsulated plugin per collection at /v1/{name} (D-15). An operation with
@@ -124,6 +131,62 @@ export function registerCollections(
 							}
 							reply.header("etag", etag(found._v));
 							return toRecord(found);
+						},
+					);
+				}
+
+				if (operations.replace !== undefined) {
+					scope.put<{ Params: { id: string } }>(
+						"/:id",
+						guard("replace", operations.replace),
+						async (request, reply) => {
+							if (mediaType(request) !== "application/json") {
+								return reply.status(415).type(PROBLEM_JSON).send(problem(415));
+							}
+							const body = request.body;
+							const errors = isPlainObject(body)
+								? validate(body)
+								: [{ keyword: "type" }];
+							if (errors !== null || !isPlainObject(body)) {
+								return reply
+									.status(400)
+									.type(PROBLEM_JSON)
+									.send(problem(400, errors ?? []));
+							}
+							const match = parseIfMatch(request.headers["if-match"]);
+							const { id } = request.params;
+							const updated = await store.replace(
+								name,
+								id,
+								body,
+								match === undefined || "any" in match
+									? undefined
+									: match.versions,
+							);
+							if (updated === null) {
+								// One follow-up read tells a missing id from a stale version.
+								const exists = await store.findById(name, id);
+								return reply
+									.status(exists === null ? 404 : 412)
+									.type(PROBLEM_JSON)
+									.send(problem(exists === null ? 404 : 412));
+							}
+							reply.header("etag", etag(updated._v));
+							return toRecord(updated);
+						},
+					);
+				}
+
+				if (operations.delete !== undefined) {
+					scope.delete<{ Params: { id: string } }>(
+						"/:id",
+						guard("delete", operations.delete),
+						async (request, reply) => {
+							const removed = await store.remove(name, request.params.id);
+							if (!removed) {
+								return reply.status(404).type(PROBLEM_JSON).send(problem(404));
+							}
+							return reply.status(204).send();
 						},
 					);
 				}

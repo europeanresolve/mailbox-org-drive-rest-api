@@ -173,7 +173,7 @@ describe("PUT /v1/{name}/{id}", () => {
 			200,
 		);
 		expect(
-			(await put(created.id, NEW_BODY, { "if-match": '"7", "3"' })).status,
+			(await put(created.id, NEW_BODY, { "if-match": '"7", "2"' })).status,
 		).toBe(200);
 	});
 

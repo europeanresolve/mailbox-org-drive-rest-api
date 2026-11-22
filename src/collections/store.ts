@@ -44,6 +44,39 @@ export class RecordStore {
 	}
 
 	/**
+	 * Replaces `data` as a whole and bumps the version, in one atomic operation.
+	 * With `versions` the document is only touched when its current version is one
+	 * of them (an empty list matches nothing). Null means no document matched:
+	 * the caller tells a missing id from a stale version with a follow-up findById.
+	 * `_id` and `createdAt` are never in the update.
+	 */
+	async replace(
+		name: string,
+		id: string,
+		data: Record<string, unknown>,
+		versions?: readonly number[],
+	): Promise<RecordDocument | null> {
+		const filter: Filter<RecordDocument> =
+			versions === undefined
+				? { _id: id }
+				: { _id: id, _v: { $in: [...versions] } };
+		return this.#records(name).findOneAndUpdate(
+			filter,
+			{
+				$set: { data, updatedAt: new Date().toISOString() },
+				$inc: { _v: 1 },
+			},
+			{ returnDocument: "after" },
+		);
+	}
+
+	/** Hard delete (D-13). True when a document was removed. */
+	async remove(name: string, id: string): Promise<boolean> {
+		const result = await this.#records(name).deleteOne({ _id: id });
+		return result.deletedCount === 1;
+	}
+
+	/**
 	 * Keyset page. The MongoDB filter is built here from parsed, typed conditions only
 	 * (JS scalars under allow-listed field names), never spread from client input.
 	 */
