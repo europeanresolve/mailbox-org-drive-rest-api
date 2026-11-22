@@ -95,9 +95,51 @@ An OpenAPI description will be generated from the code and served at `/docs`.
 
 - **Use a dedicated Drive account for the API.** A WebDAV app password unlocks that account's whole Drive, so the API should run as its own account. People share only the folders it needs into that account. Sensitive material never lives in it.
 - **Mounts are allow-lists**; paths are normalised and checked to block path traversal.
-- **Anonymous endpoints** (e.g. public form submission) rely on schema validation, payload size limits and rate limiting at the gateway, optionally with a privacy-friendly CAPTCHA.
+- **Anonymous endpoints** (e.g. public form submission) rely on schema validation, payload size and content-type limits, a honeypot field, a per-IP rate limit, a CORS allow-list and the gateway. See [Anonymous form submission](#anonymous-form-submission).
 - **Secrets** come from environment variables or a secret store, never from the repository.
 - **Personal data:** collection records may be personal data under the GDPR. Deployers are responsible for a lawful basis, retention and a data processing agreement with their storage provider (for mailbox.org, Heinlein Support GmbH offers one under Art. 28 GDPR).
+
+### Anonymous form submission
+
+The API does **not** verify CAPTCHAs. That is the caller's job. If a form needs one, the website's own backend checks it (for example with a Turnstile, hCaptcha or reCAPTCHA-style `siteverify` call) and then creates the record with an `apiKey` create, instead of letting the browser post anonymously.
+
+An anonymous create endpoint is protected by:
+
+- strict schema validation (no coercion, no extra properties, required `maxLength` on strings);
+- a body size limit and a `Content-Type: application/json` requirement;
+- a honeypot field: a submission that fills it is silently discarded;
+- a per-IP rate limit inside the API;
+- a CORS allow-list of origins per collection;
+- the gateway in front (see below).
+
+### Gateway (Kong)
+
+The API works without a gateway. If you run Kong, [`deploy/kong.yml`](deploy/kong.yml) is a reference DB-less config (tested with `kong:3.9.5`). It routes `/v1`, `/health`, `/ready` and `/docs` to the API, rate-limits per client IP (stricter on anonymous-capable `POST /v1` routes), caps the body size on those routes, and logs one JSON line per request with only the method, route name and status. The limits are examples; tune them.
+
+Run Kong with these settings (also listed at the top of the file):
+
+```sh
+docker run -d --name kong \
+  -e KONG_DATABASE=off \
+  -e KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml \
+  -e KONG_PROXY_ACCESS_LOG=off \
+  -e KONG_ADMIN_LISTEN=off \
+  -e KONG_ANONYMOUS_REPORTS=off \
+  -v "$PWD/deploy/kong.yml:/etc/kong/kong.yml:ro" \
+  -p 8000:8000 \
+  kong:3.9.5
+```
+
+- `KONG_PROXY_ACCESS_LOG=off` is required: Kong's nginx access log writes the raw request line, including the query string, which can hold personal data.
+- The config expects the API at `http://api:3000`; change the service URL to match your network.
+
+**Pair Kong with `server.trustProxy`.** Behind Kong every request reaches the API from Kong's address, so the API's per-IP rate limit would put all clients in one bucket. Set `server.trustProxy` to Kong's address or CIDR, and nothing else: it does not restrict who may call the API, it only decides whose `X-Forwarded-For` header is believed. A header from any other peer is ignored, so a client cannot forge its IP.
+
+`deploy/kong-check.sh` is a behavioural check (needs Docker and Node; not part of CI). It asks Kong to parse the file, then starts Kong against a stub upstream, sends a request with a canary string in the path, query, a header and the body, and fails if any Kong log line contains the canary or the client address. It also checks that the per-IP limit returns `429`.
+
+```sh
+bash deploy/kong-check.sh
+```
 
 ### GDPR erasure (planned)
 

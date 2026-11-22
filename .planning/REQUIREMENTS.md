@@ -49,7 +49,6 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [ ] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
 - [ ] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
 - [ ] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
-- [ ] **SEC-07**: Deployer can enable a CAPTCHA verification hook (Turnstile / hCaptcha / reCAPTCHA-style siteverify) per collection
 - [ ] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
 - [ ] **SEC-09**: Repository provides a Kong reference gateway config in `deploy/` (rate limiting, logging of method/route/status only)
 
@@ -128,6 +127,7 @@ Deferred to later milestones. Tracked but not in the current roadmap.
 | Multipart file attachments on records | Large attack surface; object storage is v3.0 |
 | Query DSL, relations, realtime, full-text search | Beyond scope for tens of writes a week |
 | Relying on WebDAV locks or `If-Match` conditional writes | Unverified on OX and unenforced by dev servers |
+| CAPTCHA verification inside the API (SEC-07) | Dropped in Phase 2 discussion (D-07): CAPTCHA is the caller's job; anonymous endpoints rely on honeypot, rate limit, CORS and the gateway |
 
 ## Traceability
 
@@ -163,7 +163,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-04 | Phase 2 | Pending |
 | SEC-05 | Phase 2 | Pending |
 | SEC-06 | Phase 2 | Pending |
-| SEC-07 | Phase 2 | Pending |
+| SEC-07 | Phase 2 | Dropped |
 | SEC-08 | Phase 2 | Pending |
 | SEC-09 | Phase 2 | Pending |
 | MIRR-01 | Phase 3 | Pending |
@@ -187,10 +187,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-11 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 50 total
-- Mapped to phases: 50
+- v1 requirements: 49 total
+- Mapped to phases: 49
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-21*
 *Last updated: 2026-11-21 after roadmap creation (traceability filled; coverage corrected from 48 to 50)*
+*Last updated: 2026-11-22 after Phase 2 plan 02-03: SEC-07 (CAPTCHA siteverify) dropped per D-07, moved to Out of Scope; coverage 50 to 49*
