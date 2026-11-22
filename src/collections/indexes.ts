@@ -1,13 +1,55 @@
 import type { Db } from "mongodb";
 import type { Config } from "../config/schema.ts";
 
-// RED scaffold: behaviour arrives in the GREEN commit.
-export async function ensureIndexes(_db: Db, _config: Config): Promise<void> {}
+/**
+ * One compound index `{ data.<path>: 1, _id: 1 }` per indexed field, plus
+ * `{ createdAt: 1, _id: 1 }` and `{ updatedAt: 1, _id: 1 }` (D-19). The `_id` tail is the
+ * keyset tie-breaker. createIndexes is idempotent, so a restart is safe; indexes for
+ * fields removed from the config stay in place.
+ */
+export async function ensureIndexes(db: Db, config: Config): Promise<void> {
+	for (const [name, definition] of Object.entries(config.collections)) {
+		await db.collection(`records_${name}`).createIndexes([
+			...(definition.indexes ?? []).map((path) => ({
+				key: { [`data.${path}`]: 1, _id: 1 },
+				name: `idx_${path.replaceAll(".", "_")}`,
+			})),
+			{ key: { createdAt: 1, _id: 1 }, name: "idx_createdAt" },
+			{ key: { updatedAt: 1, _id: 1 }, name: "idx_updatedAt" },
+		]);
+	}
+}
 
-export function scheduleIndexSetup(_options: {
+/**
+ * Runs `ensure` now and again every `retryMs` after a failure, until one run succeeds or
+ * `stop()` is called. A MongoDB outage at boot therefore only delays the indexes. The
+ * error goes to the logger as `err`, whose serializer keeps type and code and drops the message.
+ */
+export function scheduleIndexSetup(options: {
 	ensure: () => Promise<void>;
 	log: { warn: (fields: object, message: string) => void };
 	retryMs: number;
 }): { stop(): void } {
-	return { stop() {} };
+	let stopped = false;
+	let timer: NodeJS.Timeout | undefined;
+
+	const attempt = async (): Promise<void> => {
+		try {
+			await options.ensure();
+		} catch (error) {
+			// close() during a failing attempt is not worth a log line.
+			if (stopped) return;
+			options.log.warn({ err: error }, "index setup failed");
+			timer = setTimeout(() => void attempt(), options.retryMs);
+			timer.unref();
+		}
+	};
+	void attempt();
+
+	return {
+		stop() {
+			stopped = true;
+			clearTimeout(timer);
+		},
+	};
 }

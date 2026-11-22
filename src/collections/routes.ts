@@ -7,6 +7,12 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
+import {
+	encodeCursor,
+	ListQueryError,
+	parseListQuery,
+	sortValueOf,
+} from "./list-query.ts";
 import { type RecordDocument, RecordStore } from "./store.ts";
 import { compileCollections } from "./validator.ts";
 
@@ -72,6 +78,39 @@ export function registerCollections(
 							? { id: created._id, createdAt: created.createdAt }
 							: toRecord(created);
 					});
+				}
+
+				if (operations.list !== undefined) {
+					scope.get(
+						"/",
+						guard("list", operations.list),
+						async (request, reply) => {
+							let parsed: ReturnType<typeof parseListQuery>;
+							try {
+								parsed = parseListQuery(request.query, definition);
+							} catch (error) {
+								if (!(error instanceof ListQueryError)) throw error;
+								// The code is fixed text; nothing from the query comes back.
+								return reply
+									.status(400)
+									.type(PROBLEM_JSON)
+									.send(problem(400, [{ keyword: error.code }]));
+							}
+							const { items, hasMore } = await store.list(name, parsed);
+							const last = items.at(-1);
+							return {
+								items: items.map(toRecord),
+								nextCursor:
+									hasMore && last !== undefined
+										? encodeCursor({
+												s: parsed.sort.spec,
+												v: sortValueOf(last, parsed.sort.field),
+												id: last._id,
+											})
+										: null,
+							};
+						},
+					);
 				}
 
 				if (operations.get !== undefined) {

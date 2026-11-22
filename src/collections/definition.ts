@@ -223,6 +223,93 @@ function walk(
 	}
 }
 
+// --- indexed paths -----------------------------------------------------------
+
+export type ScalarType = "string" | "number" | "integer" | "boolean";
+const SCALAR_TYPES: ReadonlySet<unknown> = new Set([
+	"string",
+	"number",
+	"integer",
+	"boolean",
+]);
+
+/** Filter operators; a field path may not contain one as a segment, so parsing is unambiguous. */
+export const FILTER_OPERATORS = ["eq", "gt", "gte", "lt", "lte"] as const;
+const OPERATOR_NAMES: ReadonlySet<string> = new Set(FILTER_OPERATORS);
+/** Query parameters with a meaning of their own. */
+const RESERVED_QUERY_PARAMETERS: ReadonlySet<string> = new Set([
+	"sort",
+	"cursor",
+	"limit",
+]);
+
+type IndexPathIssue =
+	| "collection.INDEX_UNKNOWN_PATH"
+	| "collection.INDEX_THROUGH_ARRAY"
+	| "collection.INDEX_NOT_SCALAR"
+	| "collection.INDEX_OPTIONAL";
+
+/**
+ * Follows a dotted path through `properties` only. Every level must be required, so a
+ * missing value never reaches a sort and keyset comparisons never meet MongoDB's null bracket.
+ */
+export function resolveIndexPath(
+	schema: Record<string, unknown>,
+	path: string,
+): { type: ScalarType } | { code: IndexPathIssue } {
+	let node: Record<string, unknown> = schema;
+	for (const segment of path.split(".")) {
+		if (node.type === "array")
+			return { code: "collection.INDEX_THROUGH_ARRAY" };
+		const properties = node.properties;
+		if (!isRecord(properties) || !Object.hasOwn(properties, segment)) {
+			return { code: "collection.INDEX_UNKNOWN_PATH" };
+		}
+		const child = properties[segment];
+		if (!isRecord(child)) return { code: "collection.INDEX_UNKNOWN_PATH" };
+		const required = node.required;
+		if (!Array.isArray(required) || !required.includes(segment)) {
+			return { code: "collection.INDEX_OPTIONAL" };
+		}
+		node = child;
+	}
+	if (typeof node.type === "string" && SCALAR_TYPES.has(node.type)) {
+		return { type: node.type as ScalarType };
+	}
+	return { code: "collection.INDEX_NOT_SCALAR" };
+}
+
+function indexIssues(
+	indexes: unknown,
+	schema: Record<string, unknown>,
+	base: string,
+	report: (issue: ConfigIssue) => void,
+): void {
+	if (!Array.isArray(indexes)) return;
+	const seen = new Set<string>();
+	for (const [i, path] of indexes.entries()) {
+		if (typeof path !== "string" || path === "") continue;
+		const at = `${base}/indexes${pointer(i)}`;
+		let rejected = false;
+		if (path.split(".").some((segment) => OPERATOR_NAMES.has(segment))) {
+			report({ code: "collection.INDEX_OPERATOR_SEGMENT", at });
+			rejected = true;
+		}
+		if (RESERVED_QUERY_PARAMETERS.has(path)) {
+			report({ code: "collection.INDEX_RESERVED", at });
+			rejected = true;
+		}
+		if (seen.has(path)) {
+			report({ code: "collection.INDEX_DUPLICATE", at });
+			rejected = true;
+		}
+		seen.add(path);
+		if (rejected) continue;
+		const resolved = resolveIndexPath(schema, path);
+		if ("code" in resolved) report({ code: resolved.code, at });
+	}
+}
+
 // --- startup checks ----------------------------------------------------------
 
 export function collectionIssues(
@@ -263,6 +350,7 @@ export function collectionIssues(
 			continue;
 		}
 		walk(schema, schemaAt, true, report);
+		indexIssues(entry.indexes, schema, base, report);
 	}
 	return issues;
 }
