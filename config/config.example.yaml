@@ -62,14 +62,16 @@ collections:
     # "contact:<operation>"). An operation that is not listed does not exist
     # (404). Think twice before making get or list anonymous: every record,
     # including personal data, would be readable by anyone who can reach the API.
+    #   create: POST /v1/contact           list: GET /v1/contact
+    #   get: GET /v1/contact/{id}          delete: DELETE /v1/contact/{id}
+    #   replace: PUT /v1/contact/{id}      patch: PATCH /v1/contact/{id}
     operations:
-      create: anonymous       # POST   /v1/contact
-      list: apiKey            # GET    /v1/contact
-      get: apiKey             # GET    /v1/contact/{id}
-      delete: apiKey          # DELETE /v1/contact/{id}
-      # replace: apiKey       # PUT    /v1/contact/{id}   (If-Match optional)
-      # patch: apiKey         # PATCH  /v1/contact/{id}   (JSON Merge Patch)
-
+      create: anonymous
+      list: apiKey
+      get: apiKey
+      delete: apiKey
+      # replace: apiKey
+      # patch: apiKey
     # Fields list may filter and sort on (besides createdAt and updatedAt). Each
     # must be a required scalar in the schema.
     indexes: [topic]
