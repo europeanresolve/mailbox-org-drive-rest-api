@@ -65,3 +65,32 @@ Rebuild semantics, status payload, formula-guard style, Drive outage behaviour, 
 ## Deferred Ideas
 
 None.
+
+---
+
+## Update session (2026-11-22): array sheet naming and formula test
+
+**Sheet names:** the user chose field-path names (`tags`, `address.lines`), cut at 31 characters with a `~2` suffix. They first proposed `systems[1]planets`; brackets are illegal in Excel sheet names. Options for a nested array: one sheet `systems.planets` (recommended) vs **one sheet per element (chosen)**, and the format **`systems(0).planets`** (vs 1-based, vs `systems-0-planets`). Main sheet: **last name segment** (vs fixed `records`).
+
+**Formula test, round 1** (synthetic file, mailbox.org preview and editor behave the same):
+
+| Candidate | Result |
+|-----------|--------|
+| TEXTJOIN+FILTER, cached / no cache | `#NAME?` |
+| TEXTJOIN+IF array formula | Wrong (`, news` for a one-item record) |
+| COUNTIF, cached / no cache | Works |
+| HYPERLINK jump | Label shows |
+| FILTER on dotted sheet | `#NAME?` (inconclusive for the dot) |
+| Server text | Works |
+
+**Round 2:**
+
+| Candidate | Result |
+|-----------|--------|
+| TEXTJOIN on a direct range | Works |
+| `&` chain | Works |
+| COUNTIF / TEXTJOIN on `address.lines` | Works |
+| TEXTJOIN on `systems(0).planets` | Works |
+| HYPERLINK to a sheet | Label shows, **does not jump** |
+
+**Decision:** TEXTJOIN over each record's contiguous range, with no links.

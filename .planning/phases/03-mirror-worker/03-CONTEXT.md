@@ -29,8 +29,14 @@ This phase also adds **nested collection names** (slash-separated, mapped to Dri
 - **D-07:** Columns: `id` first, then schema properties in schema `properties` order, then `createdAt` and `updatedAt` last. Headers are the raw JSON keys (no `title`). A conflict between `id` and a user property cannot happen: P2 already rejects top-level `id`/`createdAt`/`updatedAt` properties (`RESERVED_PROPERTIES` in `src/collections/definition.ts`).
 - **D-08:** **No config column mapping.** MIRR-04 must be reworded to "mirror columns follow the schema in a stable order" (drop "or a config mapping"). The planner applies this together with D-02.
 - **D-09:** Nested objects are flattened with dots: `address.country` gets its own column.
-- **D-10:** **Arrays get a separate sheet per array.** A scalar array's sheet has `id`, `index`, `value`. An array of objects has `id`, `index` plus one column per object field, flattened like the main sheet. `id` refers back to the record. Sparse is fine.
-- **D-11:** The main sheet keeps a column for each array field holding a **generated formula** that summarises the array sheet (joined values, or for object arrays the summary in the same style). Which formula is used is decided by a **human check in research/planning**: the researcher generates candidate `.xlsx` files (e.g. `TEXTJOIN`+`FILTER`, older-compatible alternatives, with and without a cached `{ formula, result }` value in exceljs) and the user opens them in mailbox.org Drive and reports which renders properly. Mark this as a human-action checkpoint. **Fallback** if none renders: server-joined text written as a typed string cell. Generated formulas never embed submitted values (MIRR-05 stays intact).
+- **D-10:** **Arrays get a separate sheet per array.** A scalar array's sheet has `id`, `index`, `value`. An array of objects has `id`, `index` plus one column per object field, flattened like the main sheet. `id` refers back to the record. Sparse is fine. The worker writes each record's rows **next to each other, in main-sheet row order**, which is what D-11 relies on.
+- **D-11:** The main sheet keeps a column for each array field holding a **generated formula over that record's own contiguous range**: `_xlfn.TEXTJOIN(", ",TRUE,'<sheet>'!$C$<first>:$C$<last>)`. A record with an empty array gets an empty string cell and no formula. Generated formulas reference cells only and never embed submitted values, so MIRR-05 still holds. **Verified in mailbox.org on 2026-11-22** (preview and editor behave the same), using synthetic test files that were not committed:
+  - Works: `TEXTJOIN` on a direct range, an `&` chain (an alternative), `COUNTIF`, and references to quoted sheet names containing `.` and `(0)`.
+  - Fails: `FILTER` (`#NAME?`). `TEXTJOIN(IF(...))` as an array formula gives wrong results. `HYPERLINK("#'sheet'!A2", …)` displays its label but does not jump, so **no links**.
+  - OX recalculates on open, so a cached `result` makes no difference there. Writing one anyway is optional, at Claude's discretion, for desktop viewers that don't recalculate.
+  - Known limit: if a staff member sorts an array sheet in their copy, the ranges point at the wrong rows. This is accepted, because the next regeneration restores the sheet. The README mentions it.
+- **D-23:** Array sheet names are the **field path**: `tags`, `address.lines`. An array inside an array of objects gets **one sheet per element index**, named `systems(0).planets`, `systems(1).planets`, … (0-based, matching the `index` columns). Each such sheet holds that element's planets for every record (`id`, `index`, `value`), so the sheet count follows the longest outer array in the data, not the record count. A name over Excel's 31 characters is cut and gets a stable suffix (`~2`). Excel-forbidden characters (`: \ / ? * [ ]`) never appear, because brackets were replaced by parentheses.
+- **D-24:** The main sheet is named after the collection name's **last segment** (`signups` for `events/2026/signups`), cut to 31 characters.
 - **D-12:** Rows are sorted oldest first by `createdAt`, then `id`. The order is stable across regenerations.
 - **D-13:** `format: date-time` / `date` fields and `createdAt`/`updatedAt` become real Excel date cells in UTC.
 - **D-14:** A value over Excel's 32,767-character limit (or a lower configured cap) is truncated and ends with `…[truncated]`. The truncation count is logged, never the content. The full value stays in MongoDB.
@@ -56,7 +62,8 @@ This phase also adds **nested collection names** (slash-separated, mapped to Dri
 - Drive outage behaviour: backoff via the existing adapter retry. Following ARCHITECTURE.md, `/ready` should not fail on a Drive outage, and mirror health is informational.
 - Lease TTL, heartbeat and fencing details (ARCHITECTURE.md Pattern 2), the `mirror_state` document shape (Pattern 3), and the two-instance test design (MIRR-02).
 - How a nested name maps to a MongoDB collection name (`records_<name>` with `/` in it: check validity, or encode it), and how a dotted or bracketed property key is kept from producing ambiguous column names (e.g. reject at startup).
-- Sheet naming for array sheets within Excel's 31-character, no-`[]:*?/\` limit, and how arrays nested inside arrays are laid out.
+- The main-sheet summary for an array of objects, where there are no scalar values to join: for example the item count via `COUNTIF` on the `id` column (verified to work in OX), or a `TEXTJOIN` over the first scalar field.
+- How the `~2` suffix collision rule is made stable (deterministic order of fields).
 
 </decisions>
 
@@ -112,7 +119,7 @@ This phase also adds **nested collection names** (slash-separated, mapped to Dri
 <specifics>
 ## Specific Ideas
 
-- The user wants to test candidate array-summary formulas by opening generated `.xlsx` files in their mailbox.org Drive and reporting which renders (D-11).
+- The formula test (D-11) is done: two rounds of synthetic `.xlsx` files were opened by the user in mailbox.org Drive. No further human checkpoint is needed. The research step may add a contract test asserting the generated formula strings.
 - The user's mental model: "the whole project is a REST API for mailbox.org Drive; MongoDB primarily stores collections to be written to the Drive". The mirror is never optional.
 
 </specifics>
