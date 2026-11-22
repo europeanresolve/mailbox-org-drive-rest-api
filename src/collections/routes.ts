@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Db } from "mongodb";
 import {
 	ConfigKeyStore,
@@ -30,6 +30,15 @@ function toRecord(document: RecordDocument): Record<string, unknown> {
 		createdAt: document.createdAt,
 		updatedAt: document.updatedAt,
 	};
+}
+
+/** Fixed-text problem+json; `errors` carry keywords and safe pointers only. */
+function reject(
+	reply: FastifyReply,
+	status: number,
+	errors?: readonly { keyword: string; pointer?: string }[],
+) {
+	return reply.status(status).type(PROBLEM_JSON).send(problem(status, errors));
 }
 
 const MERGE_PATCH = "application/merge-patch+json";
@@ -79,10 +88,7 @@ export function registerCollections(
 							? validate(body)
 							: [{ keyword: "type" }];
 						if (errors !== null || !isPlainObject(body)) {
-							return reply
-								.status(400)
-								.type(PROBLEM_JSON)
-								.send(problem(400, errors ?? []));
+							return reject(reply, 400, errors ?? []);
 						}
 						const created = await store.insert(name, body);
 						reply.status(201).header("etag", etag(created._v));
@@ -103,10 +109,7 @@ export function registerCollections(
 							} catch (error) {
 								if (!(error instanceof ListQueryError)) throw error;
 								// The code is fixed text; nothing from the query comes back.
-								return reply
-									.status(400)
-									.type(PROBLEM_JSON)
-									.send(problem(400, [{ keyword: error.code }]));
+								return reject(reply, 400, [{ keyword: error.code }]);
 							}
 							const { items, hasMore } = await store.list(name, parsed);
 							const last = items.at(-1);
@@ -132,7 +135,7 @@ export function registerCollections(
 						async (request, reply) => {
 							const found = await store.findById(name, request.params.id);
 							if (found === null) {
-								return reply.status(404).type(PROBLEM_JSON).send(problem(404));
+								return reject(reply, 404);
 							}
 							reply.header("etag", etag(found._v));
 							return toRecord(found);
@@ -146,17 +149,14 @@ export function registerCollections(
 						guard("replace", operations.replace),
 						async (request, reply) => {
 							if (mediaType(request) !== "application/json") {
-								return reply.status(415).type(PROBLEM_JSON).send(problem(415));
+								return reject(reply, 415);
 							}
 							const body = request.body;
 							const errors = isPlainObject(body)
 								? validate(body)
 								: [{ keyword: "type" }];
 							if (errors !== null || !isPlainObject(body)) {
-								return reply
-									.status(400)
-									.type(PROBLEM_JSON)
-									.send(problem(400, errors ?? []));
+								return reject(reply, 400, errors ?? []);
 							}
 							const match = parseIfMatch(request.headers["if-match"]);
 							const { id } = request.params;
@@ -171,10 +171,7 @@ export function registerCollections(
 							if (updated === null) {
 								// One follow-up read tells a missing id from a stale version.
 								const exists = await store.findById(name, id);
-								return reply
-									.status(exists === null ? 404 : 412)
-									.type(PROBLEM_JSON)
-									.send(problem(exists === null ? 404 : 412));
+								return reject(reply, exists === null ? 404 : 412);
 							}
 							reply.header("etag", etag(updated._v));
 							return toRecord(updated);
@@ -195,44 +192,32 @@ export function registerCollections(
 						guard("patch", operations.patch),
 						async (request, reply) => {
 							if (mediaType(request) !== MERGE_PATCH) {
-								return reply.status(415).type(PROBLEM_JSON).send(problem(415));
+								return reject(reply, 415);
 							}
 							const patch = request.body;
 							if (!isPlainObject(patch)) {
-								return reply
-									.status(400)
-									.type(PROBLEM_JSON)
-									.send(problem(400, [{ keyword: "type" }]));
+								return reject(reply, 400, [{ keyword: "type" }]);
 							}
 							const match = parseIfMatch(request.headers["if-match"]);
 							const { id } = request.params;
 							for (let attempt = 0; attempt < PATCH_ATTEMPTS; attempt++) {
 								const current = await store.findById(name, id);
 								if (current === null) {
-									return reply
-										.status(404)
-										.type(PROBLEM_JSON)
-										.send(problem(404));
+									return reject(reply, 404);
 								}
 								if (
 									match !== undefined &&
 									!("any" in match) &&
 									!match.versions.includes(current._v)
 								) {
-									return reply
-										.status(412)
-										.type(PROBLEM_JSON)
-										.send(problem(412));
+									return reject(reply, 412);
 								}
 								const merged = applyMergePatch(current.data, patch);
 								const errors = isPlainObject(merged)
 									? validate(merged)
 									: [{ keyword: "type" }];
 								if (errors !== null || !isPlainObject(merged)) {
-									return reply
-										.status(400)
-										.type(PROBLEM_JSON)
-										.send(problem(400, errors ?? []));
+									return reject(reply, 400, errors ?? []);
 								}
 								// Filtered on the version just read, so another writer's fields are
 								// never overwritten: a miss means re-read and merge again.
@@ -244,7 +229,7 @@ export function registerCollections(
 									return toRecord(updated);
 								}
 							}
-							return reply.status(409).type(PROBLEM_JSON).send(problem(409));
+							return reject(reply, 409);
 						},
 					);
 				}
@@ -256,7 +241,7 @@ export function registerCollections(
 						async (request, reply) => {
 							const removed = await store.remove(name, request.params.id);
 							if (!removed) {
-								return reply.status(404).type(PROBLEM_JSON).send(problem(404));
+								return reject(reply, 404);
 							}
 							return reply.status(204).send();
 						},
