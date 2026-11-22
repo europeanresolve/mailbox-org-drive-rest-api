@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { FastifyInstance } from "fastify";
 import { type Db, MongoClient } from "mongodb";
 import { inject } from "vitest";
 import { stringify } from "yaml";
@@ -20,9 +21,13 @@ export type CollectionsAppOptions = {
 	/** The `collections:` block as a plain object; it goes through loadConfig as YAML. */
 	collections: Record<string, unknown>;
 	keys?: KeySpec[];
+	/** Extra keys of the `server:` block, for example `trustProxy`. */
+	server?: Record<string, unknown>;
 };
 
 export type CollectionsApp = {
+	/** The running Fastify instance, for `app.inject` with a chosen `remoteAddress`. */
+	app: FastifyInstance;
 	port: number;
 	url: string;
 	/** The per-test database the service writes to. */
@@ -66,6 +71,7 @@ export async function collectionsApp(
 			},
 		},
 		mounts: { live: { path: `/run-${runId}`, mode: "read-write" } },
+		...(options.server ? { server: options.server } : {}),
 		collections: options.collections,
 		apiKeys: (options.keys ?? []).map((k) => ({
 			name: k.name,
@@ -91,6 +97,7 @@ export async function collectionsApp(
 	const db = mongo.db();
 
 	return {
+		app: service.app,
 		port: address.port,
 		url,
 		db,

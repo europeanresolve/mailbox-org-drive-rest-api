@@ -92,6 +92,12 @@ export const ConfigSchema = Type.Object(
 						schema: Type.Record(Type.String(), Type.Unknown()),
 						operations: operationsSchema,
 						indexes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						cors: Type.Optional(
+							Type.Object(
+								{ origins: Type.Array(Type.String({ minLength: 1 })) },
+								{ additionalProperties: false },
+							),
+						),
 					},
 					{ additionalProperties: false },
 				),
@@ -143,6 +149,8 @@ export type Config = {
 			};
 			/** Dotted paths into the schema that may be filtered and sorted on. */
 			readonly indexes?: readonly string[];
+			/** Browser origins allowed to call the collection; none when absent. */
+			readonly cors?: { readonly origins: readonly string[] };
 		};
 	};
 	readonly apiKeys: readonly {
