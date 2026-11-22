@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
-status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-11-22T11:06:31.911Z"
+status: verifying
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-11-22T11:16:44.223Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: 2b7a7311a481b9246f8c78d4fb498297153a5f4c
+state_head: 3f58f2cf9a97593eaf014edf582b579be79ce34e
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
 Plan: 8 of 8
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-22 — Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -75,6 +75,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P05 | 14min | 2 tasks | 15 files |
 | Phase 02 P06 | 12min | 2 tasks | 8 files |
 | Phase 02 P07 | 10min | 1 tasks | 7 files |
+| Phase 02 P08 | 25min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-06: UNBOUNDED_STRING walks every subschema (incl. $defs); enum/const strings count as bounded
 - [Phase 02]: 02-06: real and honeypot anonymous creates share one reply function (anonymousCreated) so status, ETag and body cannot drift
 - [Phase 02]: 02-07: Idempotency-Key is handled in the create handler after honeypot and validation, so refusals, 400s and fake 201s write no entry; record id is chosen with the pending entry so stale-lock takeover cannot duplicate
+- [Phase 02]: 02-08: OpenAPI paths and components are written from config by transformObject and swagger hides every route; /health and /ready get fixed definitions because the onRoute hook misses routes registered before the plugin loads
+- [Phase 02]: 02-08: <name>.record extends the input schema's properties and required instead of allOf, so a closed input schema stays satisfiable; error statuses listed per operation as the code can produce them
 
 ### Pending Todos
 
@@ -144,6 +147,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T11:06:31.883Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-11-22T11:16:44.198Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
