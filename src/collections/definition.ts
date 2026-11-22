@@ -310,6 +310,36 @@ function indexIssues(
 	}
 }
 
+/** True when `value` is already the canonical serialisation of an http(s) origin. */
+function isCanonicalOrigin(value: string): boolean {
+	try {
+		const url = new URL(value);
+		return (
+			(url.protocol === "http:" || url.protocol === "https:") &&
+			url.origin === value
+		);
+	} catch {
+		return false;
+	}
+}
+
+/** Origins compare as exact strings, so each configured one must be canonical (D-12). */
+function originIssues(
+	cors: unknown,
+	base: string,
+	report: (issue: ConfigIssue) => void,
+): void {
+	if (!isRecord(cors) || !Array.isArray(cors.origins)) return;
+	cors.origins.forEach((origin, index) => {
+		if (typeof origin === "string" && !isCanonicalOrigin(origin)) {
+			report({
+				code: "collection.INVALID_ORIGIN",
+				at: `${base}/cors/origins/${index}`,
+			});
+		}
+	});
+}
+
 // --- startup checks ----------------------------------------------------------
 
 export function collectionIssues(
@@ -333,6 +363,8 @@ export function collectionIssues(
 		if (RESERVED_COLLECTION_NAMES.has(name)) {
 			report({ code: "collection.RESERVED_NAME", at: base });
 		}
+
+		originIssues(entry.cors, base, report);
 
 		const schema = entry.schema;
 		const schemaAt = `${base}/schema`;

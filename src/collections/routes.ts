@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Db } from "mongodb";
 import {
@@ -7,6 +8,7 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
+import { originGuard } from "./hardening.ts";
 import { parseIfMatch } from "./if-match.ts";
 import {
 	encodeCursor,
@@ -45,6 +47,16 @@ const MERGE_PATCH = "application/merge-patch+json";
 /** Total attempts for a PATCH that keeps losing the version race (D-20). */
 const PATCH_ATTEMPTS = 3;
 
+/** The HTTP method each operation registers; what a preflight may announce. */
+const OPERATION_METHOD = {
+	create: "POST",
+	list: "GET",
+	get: "GET",
+	replace: "PUT",
+	patch: "PATCH",
+	delete: "DELETE",
+} as const;
+
 const etag = (version: number): string => `"${version}"`;
 
 /** The media type without parameters, lower-cased; "" when the header is absent. */
@@ -73,6 +85,28 @@ export function registerCollections(
 
 		app.register(
 			async (scope) => {
+				// Before any route, so it also covers the preflight route (D-12).
+				scope.addHook("onRequest", originGuard(definition.cors?.origins ?? []));
+				await scope.register(cors, {
+					origin: [...(definition.cors?.origins ?? [])],
+					methods: [
+						...new Set(
+							Object.keys(operations).map(
+								(op) => OPERATION_METHOD[op as keyof typeof OPERATION_METHOD],
+							),
+						),
+					],
+					allowedHeaders: [
+						"Content-Type",
+						"Authorization",
+						"Idempotency-Key",
+						"If-Match",
+					],
+					exposedHeaders: ["ETag", "Retry-After"],
+					credentials: false,
+					maxAge: 600,
+				});
+
 				const guard = (operation: string, policy: string) =>
 					policy === "apiKey"
 						? { onRequest: requireGrant(keyStore, name, operation) }
