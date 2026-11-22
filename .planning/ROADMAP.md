@@ -57,7 +57,17 @@ Plans (listed in wave order):
   3. API consumer can get a record by ID, list records with cursor pagination and equality/range filters on indexed fields only (a filter on a non-indexed field is rejected), replace a record (PUT), merge-patch it (RFC 7396, validated after merge), and delete it
   4. Every collection operation is denied unless set to `anonymous` or `apiKey`; a request with a missing or wrong API key is rejected; keys are stored hashed and compared in constant time, and two keys can be active at once so one can be rotated out without downtime
   5. Anonymous endpoints reject an oversized body, a non-`application/json` content type, and a browser request from an origin not allowed for that collection; the per-IP rate limit still holds when a client forges `X-Forwarded-For`; and the repository provides a Kong reference config in `deploy/` that rate-limits and logs only method, route and status
-**Plans**: TBD
+**Plans:** 8 plans
+
+Plans (listed in wave order):
+- [ ] 02-01-PLAN.md — Tracer: package legitimacy gate, one config collection, anonymous POST and API-key GET with strict validation, key hashing and keygen (wave 1)
+- [ ] 02-03-PLAN.md — Kong reference config with behavioural check, README gateway section, SEC-07 dropped per D-07 (wave 1)
+- [ ] 02-02-PLAN.md — List with cursor paging, filters and sort on indexed fields only, index creation (wave 2)
+- [ ] 02-04-PLAN.md — PUT, RFC 7396 merge-patch validated after merge, DELETE, If-Match (wave 3)
+- [ ] 02-05-PLAN.md — Per-collection CORS and per-IP rate limit that resists forged X-Forwarded-For (wave 4)
+- [ ] 02-06-PLAN.md — Body size limit, JSON-only content type, honeypot (wave 5)
+- [ ] 02-07-PLAN.md — Idempotency-Key on create (wave 6)
+- [ ] 02-08-PLAN.md — OpenAPI 3.1 at `/docs` from config, example config, README, end-to-end canary sweep (wave 6)
 
 ### Phase 3: Mirror Worker
 **Goal**: Staff open an always-current `.xlsx` per collection in their Drive, written safely by a single background writer, without anyone calling the API.
