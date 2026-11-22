@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { dirname, resolve } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { type Document, isNode, parseDocument } from "yaml";
@@ -256,6 +257,37 @@ function webdavUrlIssue(
 	return { code: "storage.INSECURE_URL", at };
 }
 
+/** An IP, or `<ip>/<prefix>` with prefix 0..32 (IPv4) or 0..128 (IPv6). Zones and bare booleans are not accepted. */
+function isTrustProxyEntry(entry: string): boolean {
+	const slash = entry.indexOf("/");
+	const address = slash === -1 ? entry : entry.slice(0, slash);
+	const family = isIP(address);
+	if (family === 0 || address.includes("%")) return false;
+	if (slash === -1) return true;
+	const prefix = entry.slice(slash + 1);
+	return (
+		/^(0|[1-9]\d{0,2})$/.test(prefix) &&
+		Number(prefix) <= (family === 4 ? 32 : 128)
+	);
+}
+
+/** The issue names the index only, never the entry (D-10). */
+function trustProxyIssues(document: unknown): ConfigIssue[] {
+	if (!isRecord(document) || !isRecord(document.server)) return [];
+	const { trustProxy } = document.server;
+	if (!Array.isArray(trustProxy)) return [];
+	const issues: ConfigIssue[] = [];
+	trustProxy.forEach((entry, index) => {
+		if (typeof entry === "string" && !isTrustProxyEntry(entry)) {
+			issues.push({
+				code: "server.INVALID_TRUST_PROXY",
+				at: `/server/trustProxy/${index}`,
+			});
+		}
+	});
+	return issues;
+}
+
 function mountIssues(document: unknown, failed: Set<string>): ConfigIssue[] {
 	if (!isRecord(document) || !isRecord(document.mounts)) return [];
 	const defs: Record<string, MountDef> = {};
@@ -377,6 +409,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	const semantic: ConfigIssue[] = [...refs.issues];
 	const urlIssue = webdavUrlIssue(document, failed);
 	if (urlIssue !== undefined) semantic.push(urlIssue);
+	semantic.push(...trustProxyIssues(document));
 	semantic.push(...mountIssues(document, failed));
 	semantic.push(...collectionIssues(document, failed));
 	semantic.push(...apiKeyIssues(document, failed));

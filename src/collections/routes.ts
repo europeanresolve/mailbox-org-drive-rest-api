@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { Db } from "mongodb";
 import {
@@ -8,7 +9,7 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
-import { originGuard } from "./hardening.ts";
+import { anonymousRateLimit, originGuard } from "./hardening.ts";
 import { parseIfMatch } from "./if-match.ts";
 import {
 	encodeCursor,
@@ -77,6 +78,8 @@ export function registerCollections(
 	const keyStore = options.keyStore ?? new ConfigKeyStore(config.apiKeys);
 	const validators = compileCollections(config.collections);
 	const store = new RecordStore(db);
+	// global: false, so only routes that attach a limiter hook are counted.
+	app.register(rateLimit, { global: false });
 
 	for (const [name, definition] of Object.entries(config.collections)) {
 		const validate = validators.get(name);
@@ -107,10 +110,13 @@ export function registerCollections(
 					maxAge: 600,
 				});
 
+				// One hook, so every anonymous route of the collection shares a bucket.
+				// It runs before anything else on the route and before the body is parsed.
+				const limited = anonymousRateLimit(scope, definition.rateLimit);
 				const guard = (operation: string, policy: string) =>
 					policy === "apiKey"
 						? { onRequest: requireGrant(keyStore, name, operation) }
-						: {};
+						: { onRequest: limited };
 
 				if (operations.create !== undefined) {
 					const policy = operations.create;

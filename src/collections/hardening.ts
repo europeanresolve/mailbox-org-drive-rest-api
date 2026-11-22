@@ -1,4 +1,4 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
 
 /**
@@ -14,4 +14,20 @@ export function originGuard(origins: readonly string[]) {
 		if (origin === undefined || allowed.has(origin)) return;
 		return reply.status(403).type(PROBLEM_JSON).send(problem(403));
 	};
+}
+
+/**
+ * One onRequest hook per collection that counts anonymous requests per client IP
+ * (D-11). Each call of `rateLimit(...)` gets its own store, so every anonymous
+ * route of one collection shares one bucket and two collections never do. The key
+ * is `request.ip`, which already honours the Fastify `trustProxy` list (D-10).
+ * The limiter must be registered on `app` with `global: false`. A request over the
+ * limit throws a 429 that the app's error handler renders as problem+json; the
+ * plugin sets Retry-After first.
+ */
+export function anonymousRateLimit(
+	app: FastifyInstance,
+	{ max, windowSeconds }: { max: number; windowSeconds: number },
+) {
+	return app.rateLimit({ max, timeWindow: windowSeconds * 1000 });
 }

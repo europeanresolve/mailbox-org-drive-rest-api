@@ -31,6 +31,9 @@ beforeAll(async () => {
 					},
 				},
 				operations: { create: "anonymous", get: "apiKey" },
+				// These tests post far more often than the default 10 per minute;
+				// the limit itself is covered by rate-limit.test.ts.
+				rateLimit: { max: 10_000, windowSeconds: 60 },
 			},
 		},
 		keys: [

@@ -12,6 +12,11 @@ export interface AppOptions {
 	checks?: ReadinessChecks;
 	/** Without it no collection routes are registered. */
 	collections?: { config: Config; db: Db };
+	/**
+	 * Proxy IPs or CIDRs whose X-Forwarded-For is believed. Empty or absent means the
+	 * header is never read and the socket address is the client (D-10).
+	 */
+	trustProxy?: readonly string[];
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -21,6 +26,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		logController: new LogController({ disableRequestLogging: true }),
 		// Request ids are always generated; a client-sent header must not be trusted or logged.
 		requestIdHeader: false,
+		// Never `true`: that would believe a client-supplied X-Forwarded-For.
+		trustProxy:
+			options.trustProxy && options.trustProxy.length > 0
+				? [...options.trustProxy]
+				: false,
 	});
 	registerLogging(app);
 	registerHealthRoutes(app, options.checks);
