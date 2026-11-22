@@ -8,6 +8,7 @@ import { buildApp } from "../../src/app.ts";
 import { DEFAULT_LIMIT, MAX_LIMIT } from "../../src/collections/list-query.ts";
 import { ConfigError, loadConfig } from "../../src/config/load.ts";
 
+// biome-ignore lint/suspicious/noExplicitAny: the test walks an untyped JSON document
 type Json = Record<string, any>;
 
 const CONTACT_SCHEMA = {
@@ -86,9 +87,9 @@ function writeConfig(
 /** The Mongo client connects lazily and no request here reaches it. */
 function docsApp(
 	server?: Record<string, unknown>,
-	collections: Record<string, unknown> | undefined = COLLECTIONS,
+	collections: Record<string, unknown> | null = COLLECTIONS,
 ) {
-	const config = writeConfig(server, collections);
+	const config = writeConfig(server, collections ?? undefined);
 	const db = new MongoClient(config.mongo.uri).db();
 	return buildApp({
 		logger: { level: "silent" },
@@ -100,7 +101,7 @@ function docsApp(
 
 async function documentOf(
 	server: Record<string, unknown> | undefined = { docs: true },
-	collections: Record<string, unknown> | undefined = COLLECTIONS,
+	collections: Record<string, unknown> | null = COLLECTIONS,
 ): Promise<{ text: string; doc: Json }> {
 	const app = docsApp(server, collections);
 	try {
@@ -355,9 +356,7 @@ describe("GET /docs/json", () => {
 		const { doc } = await documentOf();
 		const refs = refsIn(doc);
 		expect(refs.length).toBeGreaterThan(10);
-		expect(refs).toContain(
-			"#/components/schemas/contact.input/$defs/address",
-		);
+		expect(refs).toContain("#/components/schemas/contact.input/$defs/address");
 		for (const ref of refs) {
 			expect(resolve(doc, ref), ref).toBeDefined();
 		}
@@ -370,7 +369,7 @@ describe("GET /docs/json", () => {
 	});
 
 	it("with no collections has only /health and /ready and no /v1 path", async () => {
-		const { doc } = await documentOf({ docs: true }, undefined);
+		const { doc } = await documentOf({ docs: true }, null);
 		expect(Object.keys(doc.paths)).toEqual(["/health", "/ready"]);
 		expect(doc.openapi).toBe("3.1.0");
 		expect(doc.components.securitySchemes.bearerAuth).toBeDefined();

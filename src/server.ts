@@ -53,6 +53,7 @@ export async function start(
 			},
 			collections: { config, db },
 			trustProxy: config.server.trustProxy,
+			docs: config.server.docs,
 		});
 		driveHealth = createDriveHealth({
 			probe: () => adapter.stat(mounts.get(firstMount).root),

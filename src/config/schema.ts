@@ -50,6 +50,8 @@ export const ConfigSchema = Type.Object(
 					port: Type.Optional(Type.Integer({ minimum: 0, maximum: 65535 })),
 					logLevel: Type.Optional(Type.Enum([...LOG_LEVELS])),
 					trustProxy: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+					// Serves the OpenAPI document and UI at /docs; off by default (T-02-33).
+					docs: Type.Optional(Type.Boolean()),
 				},
 				{ additionalProperties: false },
 			),
@@ -148,6 +150,8 @@ export type Config = {
 		readonly logLevel: LogLevel;
 		/** Proxy IPs or CIDRs whose X-Forwarded-For is believed; empty means none. */
 		readonly trustProxy: readonly string[];
+		/** Serve the OpenAPI document at /docs/json and the UI at /docs. */
+		readonly docs: boolean;
 	};
 	readonly mongo: { readonly uri: string };
 	readonly storage: {

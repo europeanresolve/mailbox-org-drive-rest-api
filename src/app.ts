@@ -3,6 +3,7 @@ import type { Db } from "mongodb";
 import type { DestinationStream } from "pino";
 import { registerCollections } from "./collections/routes.ts";
 import type { Config } from "./config/schema.ts";
+import { registerDocs } from "./http/docs.ts";
 import { type ReadinessChecks, registerHealthRoutes } from "./http/health.ts";
 import { loggerOptions, registerLogging } from "./http/logging.ts";
 
@@ -17,6 +18,8 @@ export interface AppOptions {
 	 * header is never read and the socket address is the client (D-10).
 	 */
 	trustProxy?: readonly string[];
+	/** Serve the OpenAPI document and UI at /docs; needs `collections` for the config. */
+	docs?: boolean;
 }
 
 export function buildApp(options: AppOptions = {}): FastifyInstance {
@@ -33,6 +36,11 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 				: false,
 	});
 	registerLogging(app);
+	if (options.docs && options.collections) {
+		registerDocs(app, options.collections.config, {
+			ready: options.checks !== undefined,
+		});
+	}
 	registerHealthRoutes(app, options.checks);
 	if (options.collections) registerCollections(app, options.collections);
 	return app;

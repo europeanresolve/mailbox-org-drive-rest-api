@@ -320,6 +320,7 @@ describe("loadConfig: PORT and LOG_LEVEL overrides", () => {
 			port: 8080,
 			logLevel: "debug",
 			trustProxy: [],
+			docs: false,
 		});
 	});
 
@@ -328,6 +329,7 @@ describe("loadConfig: PORT and LOG_LEVEL overrides", () => {
 			port: 4000,
 			logLevel: "warn",
 			trustProxy: [],
+			docs: false,
 		});
 	});
 
@@ -459,7 +461,12 @@ describe("loadConfig: result", () => {
 
 	it("fills defaults", () => {
 		const config = valid();
-		eq(config.server).toEqual({ port: 3000, logLevel: "info", trustProxy: [] });
+		eq(config.server).toEqual({
+			port: 3000,
+			logLevel: "info",
+			trustProxy: [],
+			docs: false,
+		});
 		expect(config.storage.webdav.concurrency).toBe(2);
 		eq(Object.keys(config.mounts)).toEqual(["forms", "content"]);
 	});

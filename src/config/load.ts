@@ -364,6 +364,7 @@ function withDefaults(document: Record<string, unknown>): Config {
 			port: server.port ?? 3000,
 			logLevel: server.logLevel ?? "info",
 			trustProxy: server.trustProxy ?? [],
+			docs: server.docs ?? false,
 		},
 		mongo: document.mongo as Config["mongo"],
 		storage: {
