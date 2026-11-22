@@ -14,6 +14,7 @@ import {
 	parseListQuery,
 	sortValueOf,
 } from "./list-query.ts";
+import { applyMergePatch } from "./merge-patch.ts";
 import { type RecordDocument, RecordStore } from "./store.ts";
 import { compileCollections } from "./validator.ts";
 
@@ -30,6 +31,10 @@ function toRecord(document: RecordDocument): Record<string, unknown> {
 		updatedAt: document.updatedAt,
 	};
 }
+
+const MERGE_PATCH = "application/merge-patch+json";
+/** Total attempts for a PATCH that keeps losing the version race (D-20). */
+const PATCH_ATTEMPTS = 3;
 
 const etag = (version: number): string => `"${version}"`;
 
@@ -173,6 +178,73 @@ export function registerCollections(
 							}
 							reply.header("etag", etag(updated._v));
 							return toRecord(updated);
+						},
+					);
+				}
+
+				if (operations.patch !== undefined) {
+					// The default JSON parser with both poisoning actions set to "error"
+					// rejects __proto__ and constructor.prototype keys, as for application/json.
+					scope.addContentTypeParser(
+						MERGE_PATCH,
+						{ parseAs: "string" },
+						scope.getDefaultJsonParser("error", "error"),
+					);
+					scope.patch<{ Params: { id: string } }>(
+						"/:id",
+						guard("patch", operations.patch),
+						async (request, reply) => {
+							if (mediaType(request) !== MERGE_PATCH) {
+								return reply.status(415).type(PROBLEM_JSON).send(problem(415));
+							}
+							const patch = request.body;
+							if (!isPlainObject(patch)) {
+								return reply
+									.status(400)
+									.type(PROBLEM_JSON)
+									.send(problem(400, [{ keyword: "type" }]));
+							}
+							const match = parseIfMatch(request.headers["if-match"]);
+							const { id } = request.params;
+							for (let attempt = 0; attempt < PATCH_ATTEMPTS; attempt++) {
+								const current = await store.findById(name, id);
+								if (current === null) {
+									return reply
+										.status(404)
+										.type(PROBLEM_JSON)
+										.send(problem(404));
+								}
+								if (
+									match !== undefined &&
+									!("any" in match) &&
+									!match.versions.includes(current._v)
+								) {
+									return reply
+										.status(412)
+										.type(PROBLEM_JSON)
+										.send(problem(412));
+								}
+								const merged = applyMergePatch(current.data, patch);
+								const errors = isPlainObject(merged)
+									? validate(merged)
+									: [{ keyword: "type" }];
+								if (errors !== null || !isPlainObject(merged)) {
+									return reply
+										.status(400)
+										.type(PROBLEM_JSON)
+										.send(problem(400, errors ?? []));
+								}
+								// Filtered on the version just read, so another writer's fields are
+								// never overwritten: a miss means re-read and merge again.
+								const updated = await store.replace(name, id, merged, [
+									current._v,
+								]);
+								if (updated !== null) {
+									reply.header("etag", etag(updated._v));
+									return toRecord(updated);
+								}
+							}
+							return reply.status(409).type(PROBLEM_JSON).send(problem(409));
 						},
 					);
 				}
