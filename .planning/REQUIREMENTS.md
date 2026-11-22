@@ -45,10 +45,10 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 - [x] **SEC-01**: Deployer can set each collection operation to `anonymous` or `apiKey`; anything unset is denied
 - [x] **SEC-02**: API consumer can authenticate with an API key; keys are stored hashed, compared in constant time, and several can be active at once for rotation
-- [ ] **SEC-03**: Anonymous endpoints enforce a per-route body size limit, required `maxLength` on strings, and `Content-Type: application/json`
+- [x] **SEC-03**: Anonymous endpoints enforce a per-route body size limit, required `maxLength` on strings, and `Content-Type: application/json`
 - [x] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
 - [x] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
-- [ ] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
+- [x] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
 - [ ] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
 - [x] **SEC-09**: Repository provides a Kong reference gateway config in `deploy/` (rate limiting, logging of method/route/status only)
 
@@ -159,10 +159,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COLL-08 | Phase 2 | Complete |
 | SEC-01 | Phase 2 | Complete |
 | SEC-02 | Phase 2 | Complete |
-| SEC-03 | Phase 2 | Pending |
+| SEC-03 | Phase 2 | Complete |
 | SEC-04 | Phase 2 | Complete |
 | SEC-05 | Phase 2 | Complete |
-| SEC-06 | Phase 2 | Pending |
+| SEC-06 | Phase 2 | Complete |
 | SEC-07 | Phase 2 | Dropped |
 | SEC-08 | Phase 2 | Pending |
 | SEC-09 | Phase 2 | Complete |

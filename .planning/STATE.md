@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-11-22T10:53:50.755Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-11-22T11:01:08.871Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: 895a5cea4b855f7eb246a43a4b3b92d626e62b65
+state_head: c0a959b410293f7af4ce63986c223fa79267e252
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P02 | 25min | 2 tasks | 10 files |
 | Phase 02 P04 | 8min | 2 tasks | 7 files |
 | Phase 02 P05 | 14min | 2 tasks | 15 files |
+| Phase 02 P06 | 12min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: malformed, weak or unquoted If-Match parses to an empty version list and gives 412, never last-write-wins
 - [Phase 02]: 02-05: the forwarded client is the nearest address not in server.trustProxy (Fastify), not the left-most, so a forged leading X-Forwarded-For entry cannot open a new rate-limit bucket
 - [Phase 02]: 02-05: origin guard and rate limiter are separate hooks; a rejected origin spends no slot and a CORS preflight never reaches the limiter
+- [Phase 02]: 02-06: 415 media-type hook runs after credentials and the rate limiter, so an unauthenticated caller gets 401, never a media-type hint
+- [Phase 02]: 02-06: UNBOUNDED_STRING walks every subschema (incl. $defs); enum/const strings count as bounded
+- [Phase 02]: 02-06: real and honeypot anonymous creates share one reply function (anonymousCreated) so status, ETag and body cannot drift
 
 ### Pending Todos
 
@@ -138,6 +142,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:53:50.731Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-11-22T11:01:08.847Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None
