@@ -13,7 +13,7 @@ Milestone v1.0 takes the project from an empty repository to a self-hostable RES
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundations, OX Spike and Storage Layer** - Local stack, CI, fail-fast config, PII-free logs, WebDAV compatibility matrix, and a path-safe StorageAdapter
-- [ ] **Phase 2: Collections, Access Policy and Anonymous Hardening** - Config-defined collections with strict validation, CRUD, default-deny policy, API keys, and abuse-resistant anonymous form submission
+- [x] **Phase 2: Collections, Access Policy and Anonymous Hardening** - Config-defined collections with strict validation, CRUD, default-deny policy, API keys, and abuse-resistant anonymous form submission (completed 2026-11-22)
 - [ ] **Phase 3: Mirror Worker** - Debounced, single-writer, formula-safe `.xlsx` mirror per collection with recovery and operator status
 - [ ] **Phase 4: Read-only Content** - Sheets as JSON, `.docx` as Markdown and file downloads from an ETag-validated cache with stale-if-error
 
@@ -57,7 +57,7 @@ Plans (listed in wave order):
   3. API consumer can get a record by ID, list records with cursor pagination and equality/range filters on indexed fields only (a filter on a non-indexed field is rejected), replace a record (PUT), merge-patch it (RFC 7396, validated after merge), and delete it
   4. Every collection operation is denied unless set to `anonymous` or `apiKey`; a request with a missing or wrong API key is rejected; keys are stored hashed and compared in constant time, and two keys can be active at once so one can be rotated out without downtime
   5. Anonymous endpoints reject an oversized body, a non-`application/json` content type, and a browser request from an origin not allowed for that collection; the per-IP rate limit still holds when a client forges `X-Forwarded-For`; and the repository provides a Kong reference config in `deploy/` that rate-limits and logs only method, route and status
-**Plans:** 8/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans (listed in wave order):
 - [x] 02-01-PLAN.md — Tracer: package legitimacy gate, one config collection, anonymous POST and API-key GET with strict validation, key hashing and keygen (wave 1)
@@ -103,6 +103,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations, OX Spike and Storage Layer | 12/12 | In Progress | - |
-| 2. Collections, Access Policy and Anonymous Hardening | 8/8 | In Progress | - |
+| 2. Collections, Access Policy and Anonymous Hardening | 8/8 | Complete    | 2026-11-22 |
 | 3. Mirror Worker | 0/TBD | Not started | - |
 | 4. Read-only Content | 0/TBD | Not started | - |
