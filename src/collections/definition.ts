@@ -265,6 +265,28 @@ function writesAnonymously(operations: unknown): boolean {
 	);
 }
 
+/** The honeypot must not be a field a real submission can carry, and only anonymous create has bots (D-08). */
+function honeypotIssues(
+	entry: Record<string, unknown>,
+	schema: unknown,
+	base: string,
+	report: (issue: ConfigIssue) => void,
+): void {
+	const { honeypot } = entry;
+	if (typeof honeypot !== "string") return;
+	const at = `${base}/honeypot`;
+	if (!isRecord(entry.operations) || entry.operations.create !== "anonymous") {
+		report({ code: "collection.HONEYPOT_NOT_ANONYMOUS", at });
+	}
+	if (
+		isRecord(schema) &&
+		isRecord(schema.properties) &&
+		Object.hasOwn(schema.properties, honeypot)
+	) {
+		report({ code: "collection.HONEYPOT_IN_SCHEMA", at });
+	}
+}
+
 // --- indexed paths -----------------------------------------------------------
 
 export type ScalarType = "string" | "number" | "integer" | "boolean";
@@ -407,6 +429,7 @@ export function collectionIssues(
 		}
 
 		originIssues(entry.cors, base, report);
+		honeypotIssues(entry, entry.schema, base, report);
 
 		const schema = entry.schema;
 		const schemaAt = `${base}/schema`;

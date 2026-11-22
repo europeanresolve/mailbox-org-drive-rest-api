@@ -57,3 +57,17 @@ export function requireMediaType(type: string) {
 		return reply.status(415).type(PROBLEM_JSON).send(problem(415));
 	};
 }
+
+/**
+ * True when a bot filled the honeypot (D-08): the body is a plain object with an own
+ * property `field` whose value is neither "" nor null. Whitespace, 0, false, objects
+ * and arrays all count as filled; an absent field does not.
+ */
+export function honeypotFilled(body: unknown, field: string): boolean {
+	if (typeof body !== "object" || body === null || Array.isArray(body)) {
+		return false;
+	}
+	if (!Object.hasOwn(body, field)) return false;
+	const value = (body as Record<string, unknown>)[field];
+	return value !== "" && value !== null;
+}

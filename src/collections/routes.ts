@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import type { FastifyInstance, FastifyReply } from "fastify";
@@ -11,6 +12,7 @@ import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
 import {
 	anonymousRateLimit,
+	honeypotFilled,
 	originGuard,
 	requireMediaType,
 } from "./hardening.ts";
@@ -137,6 +139,20 @@ export function registerCollections(
 						bodyRoute("create", policy, JSON_TYPE),
 						async (request, reply) => {
 							const body = request.body;
+							const { honeypot } = definition;
+							if (policy === "anonymous" && honeypot !== undefined) {
+								// Before validation, so a bot learns nothing from a 400 and the
+								// path writes and logs nothing (D-08). A key does not skip it (D-05).
+								if (honeypotFilled(body, honeypot)) {
+									reply.status(201).header("etag", etag(1));
+									return {
+										id: randomUUID(),
+										createdAt: new Date().toISOString(),
+									};
+								}
+								// The one stripping exception: an empty or null honeypot.
+								if (isPlainObject(body)) delete body[honeypot];
+							}
 							// Record bodies are validated here, not through route `schema.body`:
 							// Fastify's Ajv would coerce and strip them.
 							const errors = isPlainObject(body)
