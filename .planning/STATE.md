@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-11-22T10:45:41.636Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-11-22T10:53:50.755Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: a0f17529fc8abedd7447ff6a97aa249157aade28
+state_head: 895a5cea4b855f7eb246a43a4b3b92d626e62b65
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 5 of 8
+Plan: 6 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -72,6 +72,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P01 | 9min | 3 tasks | 21 files |
 | Phase 02 P02 | 25min | 2 tasks | 10 files |
 | Phase 02 P04 | 8min | 2 tasks | 7 files |
+| Phase 02 P05 | 14min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,8 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-04: PATCH write is always filtered on the version it read (If-Match *, lists included); header checked against it first, 3 attempts then 409
 - [Phase 02]: 02-04: applyMergePatch defines members as own data properties and reads own members only, so __proto__ stays data
 - [Phase 02]: 02-04: malformed, weak or unquoted If-Match parses to an empty version list and gives 412, never last-write-wins
+- [Phase 02]: 02-05: the forwarded client is the nearest address not in server.trustProxy (Fastify), not the left-most, so a forged leading X-Forwarded-For entry cannot open a new rate-limit bucket
+- [Phase 02]: 02-05: origin guard and rate limiter are separate hooks; a rejected origin spends no slot and a CORS preflight never reaches the limiter
 
 ### Pending Todos
 
@@ -135,6 +138,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:45:41.614Z
-Stopped at: Completed 02-04-PLAN.md
+Last session: 2026-11-22T10:53:50.731Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
