@@ -68,7 +68,7 @@ export function entryId(collection: string, key: string): string {
 	return createHash("sha256").update(`${collection}\n${key}`).digest("hex");
 }
 
-function isDuplicateKey(error: unknown): boolean {
+export function isDuplicateKey(error: unknown): boolean {
 	return (error as { code?: number } | null)?.code === DUPLICATE_KEY;
 }
 

@@ -20,7 +20,9 @@ import {
 import {
 	canonicalHash,
 	IdempotencyStore,
+	isDuplicateKey,
 	parseIdempotencyKey,
+	type StoredResponse,
 } from "./idempotency.ts";
 import { parseIfMatch } from "./if-match.ts";
 import {
@@ -74,12 +76,26 @@ const OPERATION_METHOD = {
 const etag = (version: number): string => `"${version}"`;
 
 /**
- * The only reply an anonymous create ever sends, real or honeypot: one function sets
- * status, ETag and body, so the two cannot drift apart. A new record is version 1.
+ * The 201 of a new record. Anonymous callers get only id and createdAt at version 1;
+ * the honeypot's fake uses the same builder, so real and fake cannot drift apart.
  */
-function anonymousCreated(reply: FastifyReply, id: string, createdAt: string) {
-	reply.status(201).header("etag", etag(1));
-	return { id, createdAt };
+function anonymousResponse(id: string, createdAt: string): StoredResponse {
+	return { status: 201, etag: etag(1), body: { id, createdAt } };
+}
+
+function createdResponse(
+	policy: string,
+	created: RecordDocument,
+): StoredResponse {
+	return policy === "anonymous"
+		? anonymousResponse(created._id, created.createdAt)
+		: { status: 201, etag: etag(created._v), body: toRecord(created) };
+}
+
+/** The one place a create reply gets its status, ETag and body: real, replayed or fake. */
+function sendCreated(reply: FastifyReply, response: StoredResponse) {
+	reply.status(response.status).header("etag", response.etag);
+	return response.body;
 }
 
 /**
@@ -160,10 +176,9 @@ export function registerCollections(
 								// Before validation, so a bot learns nothing from a 400 and the
 								// path writes and logs nothing (D-08). A key does not skip it (D-05).
 								if (honeypotFilled(body, honeypot)) {
-									return anonymousCreated(
+									return sendCreated(
 										reply,
-										randomUUID(),
-										new Date().toISOString(),
+										anonymousResponse(randomUUID(), new Date().toISOString()),
 									);
 								}
 								// The one stripping exception: an empty or null honeypot.
@@ -178,65 +193,49 @@ export function registerCollections(
 								return reject(reply, 400, errors ?? []);
 							}
 							const rawKey = request.headers["idempotency-key"];
-							if (rawKey === undefined) {
-								const created = await store.insert(name, body);
-								if (policy === "anonymous") {
-									return anonymousCreated(
-										reply,
-										created._id,
-										created.createdAt,
-									);
-								}
-								reply.status(201).header("etag", etag(created._v));
-								return toRecord(created);
-							}
-							const key = parseIdempotencyKey(rawKey);
+							const key =
+								rawKey === undefined ? undefined : parseIdempotencyKey(rawKey);
 							if (key === null) {
 								return reject(reply, 400, [{ keyword: "idempotencyKey" }]);
 							}
-							// Anonymous routes never read Authorization, so the principal is fixed (D-05).
-							const principal =
-								policy === "anonymous" ? "anonymous" : principalOf(request);
-							const begun = await idempotency.begin(
-								name,
-								key,
-								principal,
-								canonicalHash(body),
-							);
-							if (begun.kind === "mismatch") return reject(reply, 422);
-							if (begun.kind === "in-flight") return reject(reply, 409);
-							if (begun.kind === "replay") {
-								reply.status(begun.response.status);
-								reply.header("etag", begun.response.etag);
-								return begun.response.body;
+							// Without a key: insert and reply. With one: the same, after the
+							// idempotency entry has decided whether this request may store.
+							let recordId: string | undefined;
+							if (key !== undefined) {
+								const begun = await idempotency.begin(
+									name,
+									key,
+									// Anonymous routes never read Authorization (D-05).
+									policy === "anonymous" ? "anonymous" : principalOf(request),
+									canonicalHash(body),
+								);
+								if (begun.kind === "mismatch") return reject(reply, 422);
+								if (begun.kind === "in-flight") return reject(reply, 409);
+								if (begun.kind === "replay") {
+									return sendCreated(reply, begun.response);
+								}
+								recordId = begun.recordId;
 							}
 							let created: RecordDocument;
 							try {
-								created = await store.insert(name, body, begun.recordId);
+								created = await store.insert(name, body, recordId);
 							} catch (error) {
 								// A duplicate id means an earlier attempt already stored the record.
 								const stored =
-									(error as { code?: number } | null)?.code === 11000
-										? await store.findById(name, begun.recordId)
+									recordId !== undefined && isDuplicateKey(error)
+										? await store.findById(name, recordId)
 										: null;
 								if (stored === null) {
-									await idempotency.abandon(name, key);
+									if (key !== undefined) await idempotency.abandon(name, key);
 									throw error;
 								}
 								created = stored;
 							}
-							const payload =
-								policy === "anonymous"
-									? { id: created._id, createdAt: created.createdAt }
-									: toRecord(created);
-							const createdEtag = etag(policy === "anonymous" ? 1 : created._v);
-							await idempotency.complete(name, key, {
-								status: 201,
-								etag: createdEtag,
-								body: payload,
-							});
-							reply.status(201).header("etag", createdEtag);
-							return payload;
+							const response = createdResponse(policy, created);
+							if (key !== undefined) {
+								await idempotency.complete(name, key, response);
+							}
+							return sendCreated(reply, response);
 						},
 					);
 				}
