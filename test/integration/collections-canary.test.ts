@@ -336,7 +336,10 @@ describe("Phase 2 error paths never echo the canary", () => {
 			201,
 			{ problem: false },
 		);
-		expect(Object.keys(res.json()).sort()).toEqual(["createdAt", "id"]);
+		expect(Object.keys(JSON.parse(res.body)).sort()).toEqual([
+			"createdAt",
+			"id",
+		]);
 		expect(await app.db.collection("records_contact").countDocuments()).toBe(0);
 	});
 
