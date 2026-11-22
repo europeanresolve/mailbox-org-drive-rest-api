@@ -91,6 +91,7 @@ export const ConfigSchema = Type.Object(
 					{
 						schema: Type.Record(Type.String(), Type.Unknown()),
 						operations: operationsSchema,
+						indexes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 					},
 					{ additionalProperties: false },
 				),
@@ -140,6 +141,8 @@ export type Config = {
 			readonly operations: {
 				readonly [op in CollectionOperation]?: CollectionPolicy;
 			};
+			/** Dotted paths into the schema that may be filtered and sorted on. */
+			readonly indexes?: readonly string[];
 		};
 	};
 	readonly apiKeys: readonly {
