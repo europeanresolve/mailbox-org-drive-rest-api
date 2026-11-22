@@ -16,6 +16,7 @@ import {
 import {
 	type Config,
 	ConfigSchema,
+	DEFAULT_BODY_LIMIT,
 	LOG_LEVELS,
 	MOUNT_NAME_PATTERN,
 } from "./schema.ts";
@@ -335,7 +336,7 @@ function inDocumentOrder(
 
 const DEFAULT_RATE_LIMIT = { max: 10, windowSeconds: 60 };
 
-function withRateLimitDefaults(collections: unknown): Config["collections"] {
+function withCollectionDefaults(collections: unknown): Config["collections"] {
 	return Object.fromEntries(
 		Object.entries(
 			(collections ?? {}) as Record<string, Record<string, unknown>>,
@@ -343,6 +344,8 @@ function withRateLimitDefaults(collections: unknown): Config["collections"] {
 			name,
 			{
 				...entry,
+				bodyLimit:
+					(entry.bodyLimit as number | undefined) ?? DEFAULT_BODY_LIMIT,
 				rateLimit: {
 					...DEFAULT_RATE_LIMIT,
 					...(entry.rateLimit as object | undefined),
@@ -370,7 +373,7 @@ function withDefaults(document: Record<string, unknown>): Config {
 			},
 		},
 		mounts: document.mounts as Config["mounts"],
-		collections: withRateLimitDefaults(document.collections),
+		collections: withCollectionDefaults(document.collections),
 		apiKeys: (document.apiKeys ?? []) as Config["apiKeys"],
 	};
 }

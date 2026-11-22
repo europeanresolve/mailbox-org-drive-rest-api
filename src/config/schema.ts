@@ -23,6 +23,9 @@ export const COLLECTION_OPERATIONS = [
 ] as const;
 export type CollectionOperation = (typeof COLLECTION_OPERATIONS)[number];
 
+export const DEFAULT_BODY_LIMIT = 16384;
+export const MAX_BODY_LIMIT = 1048576;
+
 export const COLLECTION_POLICIES = ["anonymous", "apiKey"] as const;
 export type CollectionPolicy = (typeof COLLECTION_POLICIES)[number];
 
@@ -93,6 +96,10 @@ export const ConfigSchema = Type.Object(
 						schema: Type.Record(Type.String(), Type.Unknown()),
 						operations: operationsSchema,
 						indexes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						// Bytes of request body; Fastify answers 413 above it.
+						bodyLimit: Type.Optional(
+							Type.Integer({ minimum: 1, maximum: MAX_BODY_LIMIT }),
+						),
 						rateLimit: Type.Optional(
 							Type.Object(
 								{
@@ -163,6 +170,8 @@ export type Config = {
 			readonly indexes?: readonly string[];
 			/** Browser origins allowed to call the collection; none when absent. */
 			readonly cors?: { readonly origins: readonly string[] };
+			/** Largest accepted request body in bytes. */
+			readonly bodyLimit: number;
 			/** In-app limit per client IP on the collection's anonymous operations. */
 			readonly rateLimit: {
 				readonly max: number;
