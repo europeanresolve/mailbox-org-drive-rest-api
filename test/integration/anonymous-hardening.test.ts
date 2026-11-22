@@ -1,5 +1,5 @@
 import { request as httpRequest } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
 	type CollectionsApp,
 	collectionsApp,
@@ -269,5 +269,190 @@ describe("what a 413 and a 415 reveal", () => {
 		}
 		const logs = app.logs.lines().join("\n");
 		expect(logs).not.toMatch(CANARY_PATTERN);
+	});
+});
+
+describe("honeypot", () => {
+	const reader = newKey();
+	const READ = { authorization: `Bearer ${reader}` };
+	const UUID_V4 =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+	let trap: CollectionsApp;
+
+	beforeAll(async () => {
+		trap = await collectionsApp({
+			collections: {
+				contact: {
+					schema: {
+						type: "object",
+						additionalProperties: false,
+						required: ["email", "name"],
+						properties: {
+							email: { type: "string", maxLength: 254 },
+							name: { type: "string", maxLength: 100 },
+						},
+					},
+					operations: { create: "anonymous", get: "apiKey" },
+					honeypot: "website",
+					rateLimit: { max: 10000, windowSeconds: 60 },
+				},
+			},
+			keys: [{ name: "reader", key: reader, grants: ["contact:get"] }],
+		});
+	});
+
+	afterAll(async () => {
+		await trap?.close();
+	});
+
+	const stored = () => trap.db.collection("records_contact").countDocuments();
+	const valid = { email: "a@example.invalid", name: "Ada" };
+
+	function submit(body: unknown, headers: Record<string, string> = {}) {
+		return trap.app.inject({
+			method: "POST",
+			url: "/v1/contact",
+			headers: { "content-type": "application/json", ...headers },
+			payload: JSON.stringify(body),
+		});
+	}
+
+	/** The log lines one request adds; waits for the onResponse line. */
+	async function logged(run: () => Promise<unknown>) {
+		const before = trap.logs.lines().length;
+		await run();
+		await vi.waitFor(() =>
+			expect(trap.logs.lines().length).toBeGreaterThan(before),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		return trap.logs.lines().slice(before);
+	}
+
+	it("creates for real when the honeypot is empty, and stores no honeypot key", async () => {
+		const res = await submit({ ...valid, website: "" });
+		expect(res.statusCode).toBe(201);
+		const { id } = res.json();
+		const doc = await trap.db
+			.collection("records_contact")
+			.findOne({ _id: id });
+		expect(doc).not.toBeNull();
+		expect(Object.keys(doc?.data ?? {}).sort()).toEqual(["email", "name"]);
+	});
+
+	it("creates for real when the honeypot is absent", async () => {
+		const before = await stored();
+		const res = await submit(valid);
+		expect(res.statusCode).toBe(201);
+		expect(await stored()).toBe(before + 1);
+	});
+
+	it("creates for real when the honeypot is null, without storing it", async () => {
+		const before = await stored();
+		const res = await submit({ ...valid, website: null });
+		expect(res.statusCode).toBe(201);
+		expect(await stored()).toBe(before + 1);
+		const doc = await trap.db
+			.collection("records_contact")
+			.findOne({ _id: res.json().id });
+		expect(Object.keys(doc?.data ?? {}).sort()).toEqual(["email", "name"]);
+	});
+
+	it("answers a filled honeypot with a fake 201 and stores nothing", async () => {
+		const before = await stored();
+		const res = await submit({ ...valid, website: "http://spam.example" });
+		expect(res.statusCode).toBe(201);
+		expect(res.headers.etag).toBe('"1"');
+		const body = res.json();
+		expect(Object.keys(body).sort()).toEqual(["createdAt", "id"]);
+		expect(body.id).toMatch(UUID_V4);
+		expect(Math.abs(Date.now() - Date.parse(body.createdAt))).toBeLessThan(
+			60_000,
+		);
+		expect(await stored()).toBe(before);
+		const got = await trap.app.inject({
+			method: "GET",
+			url: `/v1/contact/${body.id}`,
+			headers: READ,
+		});
+		expect(got.statusCode).toBe(404);
+	});
+
+	it.each([[" "], [0], [false], [{}], [[]]])(
+		"treats %j as filled",
+		async (value) => {
+			const before = await stored();
+			const res = await submit({ ...valid, website: value });
+			expect(res.statusCode).toBe(201);
+			expect(res.headers.etag).toBe('"1"');
+			expect(await stored()).toBe(before);
+		},
+	);
+
+	it("gives the fake 201 even when the rest of the body is invalid", async () => {
+		const before = await stored();
+		for (const body of [
+			{ website: "x", extra: 1, email: "a@example.invalid", name: "Ada" },
+			{ website: "x" },
+			{ website: "x", email: 5 },
+		]) {
+			const res = await submit(body);
+			expect(res.statusCode).toBe(201);
+			expect(Object.keys(res.json()).sort()).toEqual(["createdAt", "id"]);
+		}
+		expect(await stored()).toBe(before);
+	});
+
+	it("gives each fake response a fresh id", async () => {
+		const a = await submit({ ...valid, website: "x" });
+		const b = await submit({ ...valid, website: "x" });
+		expect(a.json().id).not.toBe(b.json().id);
+	});
+
+	it("is not bypassed by a valid API key (D-05)", async () => {
+		const before = await stored();
+		const res = await submit({ ...valid, website: "x" }, READ);
+		expect(res.statusCode).toBe(201);
+		expect(res.headers.etag).toBe('"1"');
+		expect(await stored()).toBe(before);
+	});
+
+	it("looks like a real create: same status, header names and body keys", async () => {
+		const real = await submit(valid);
+		const fake = await submit({ ...valid, website: "x" });
+		const names = (headers: Record<string, unknown>) =>
+			Object.keys(headers)
+				.filter((name) => name !== "date")
+				.sort();
+		expect(fake.statusCode).toBe(real.statusCode);
+		expect(names(fake.headers)).toEqual(names(real.headers));
+		expect(fake.headers["content-type"]).toBe(real.headers["content-type"]);
+		expect(Object.keys(fake.json()).sort()).toEqual(
+			Object.keys(real.json()).sort(),
+		);
+	});
+
+	it("writes one log line, shaped like a real create's, with no submitted text", async () => {
+		const [real] = await logged(() => submit(valid));
+		const lines = await logged(() =>
+			submit({ email: CANARY, name: CANARY, website: CANARY }),
+		);
+		expect(lines).toHaveLength(1);
+		const shape = (line: string | undefined) => {
+			const entry = JSON.parse(line ?? "{}");
+			return { keys: Object.keys(entry.req).sort(), route: entry.req.route };
+		};
+		const fake = JSON.parse(lines[0] ?? "{}");
+		expect(fake.res.status).toBe(201);
+		expect(Object.keys(fake).sort()).toEqual(
+			Object.keys(JSON.parse(real ?? "{}")).sort(),
+		);
+		expect(shape(lines[0])).toEqual(shape(real));
+		expect(trap.logs.lines().join("\n")).not.toMatch(CANARY_PATTERN);
+	});
+
+	it("carries no submitted text in the response", async () => {
+		const res = await submit({ email: CANARY, name: CANARY, website: CANARY });
+		expect(res.body).not.toMatch(CANARY_PATTERN);
+		expect(JSON.stringify(res.headers)).not.toMatch(CANARY_PATTERN);
 	});
 });

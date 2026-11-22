@@ -158,3 +158,43 @@ describe("strings in anonymous-write schemas", () => {
 		expect(config.collections.contact?.schema).toEqual(schema);
 	});
 });
+
+describe("collections.<name>.honeypot", () => {
+	it("loads a valid honeypot name that the schema does not define", () => {
+		expect(load({ honeypot: "website" }).collections.contact?.honeypot).toBe(
+			"website",
+		);
+	});
+
+	it("leaves the honeypot absent by default", () => {
+		expect(load().collections.contact?.honeypot).toBeUndefined();
+	});
+
+	it("rejects a name that is also a root schema property", () => {
+		const schema = schemaWith({ website: { type: "string", maxLength: 50 } });
+		expect(
+			codes(issuesOf(() => load({ schema, honeypot: "website" }))),
+		).toEqual(["collection.HONEYPOT_IN_SCHEMA /collections/contact/honeypot"]);
+	});
+
+	it("rejects a honeypot on a collection whose create is not anonymous", () => {
+		for (const operations of [{ create: "apiKey" }, { get: "anonymous" }]) {
+			expect(
+				codes(issuesOf(() => load({ operations, honeypot: "website" }))),
+			).toEqual([
+				"collection.HONEYPOT_NOT_ANONYMOUS /collections/contact/honeypot",
+			]);
+		}
+	});
+
+	it.each([["$x"], ["a.b"], [""], ["1abc"], ["a".repeat(65)]])(
+		"rejects the name %j with schema.pattern or schema.minLength",
+		(honeypot) => {
+			const found = codes(issuesOf(() => load({ honeypot })));
+			expect(found).toHaveLength(1);
+			expect(found[0]).toMatch(
+				/^schema\.(pattern) \/collections\/contact\/honeypot$/,
+			);
+		},
+	);
+});

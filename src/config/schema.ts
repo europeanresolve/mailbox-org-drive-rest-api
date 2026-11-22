@@ -100,6 +100,10 @@ export const ConfigSchema = Type.Object(
 						bodyLimit: Type.Optional(
 							Type.Integer({ minimum: 1, maximum: MAX_BODY_LIMIT }),
 						),
+						// Name of a hidden form field that only bots fill (D-08).
+						honeypot: Type.Optional(
+							Type.String({ pattern: "^[A-Za-z][A-Za-z0-9_-]{0,63}$" }),
+						),
 						rateLimit: Type.Optional(
 							Type.Object(
 								{
@@ -170,6 +174,8 @@ export type Config = {
 			readonly indexes?: readonly string[];
 			/** Browser origins allowed to call the collection; none when absent. */
 			readonly cors?: { readonly origins: readonly string[] };
+			/** Hidden field name; a filled value on anonymous create gets a fake 201. */
+			readonly honeypot?: string;
 			/** Largest accepted request body in bytes. */
 			readonly bodyLimit: number;
 			/** In-app limit per client IP on the collection's anonymous operations. */
