@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-11-22T10:14:48.938Z"
-last_activity: 2026-11-21
-last_activity_desc: Phase 01 execution started
-state_head: e63bee4f722b16a66fb98156eda19ff1c578e32f
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-11-22T10:21:32.023Z"
+last_activity: 2026-11-22
+last_activity_desc: Phase 02 execution started
+state_head: 6d144117ff72d7e520fbcd0e62404e06d2d00b4f
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** Staff keep working in the Drive they already use, and developers get a safe, fast JSON API on top of it.
-**Current focus:** Phase 01 — Foundations, OX Spike and Storage Layer
+**Current focus:** Phase 02 — Collections, Access Policy and Anonymous Hardening
 
 ## Current Position
 
-Phase: 02 (Collections, Access Policy and Anonymous Hardening) — READY TO EXECUTE
-Plan: 12 of 12
+Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-11-21 — Phase 01 execution started
+Last activity: 2026-11-22 — Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 1h | 3 tasks | 1 files |
 | Phase 01 P10 | 12min | 3 tasks | 12 files |
 | Phase 01 P12 | 10min | 2 tasks | 5 files |
+| Phase 02 P03 | 20min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,7 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-02]: OX spike anon/ record lives outside the repo at ~/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon; OX honours If-Match (412), unlike hacdias, and ETags must be synthesised in fixtures
 - [Phase 01]: [01-10]: OX fixtures use synthetic ETags; lastModified null on OX (C-1) and NFD-vs-NFC path folding (C-2) are left for plan 01-12 and pinned by an it.fails replay case
 - [Phase 01]: [01-12] Keep NFC fold for OX NFD names (C-2); NFD files stay unreachable via adapter, listed as OX returns them
+- [Phase 02]: Kong file-log removes request-carrying fields via custom_fields_by_lua returning nil; kong:3.9.5 pinned (02-03)
 
 ### Pending Todos
 
@@ -121,6 +123,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T08:43:46.707Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-collections-access-policy-and-anonymous-hardening/02-CONTEXT.md
+Last session: 2026-11-22T10:21:31.957Z
+Stopped at: Completed 02-03-PLAN.md
+Resume file: None

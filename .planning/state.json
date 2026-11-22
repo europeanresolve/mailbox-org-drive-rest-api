@@ -11,7 +11,7 @@
     {
       "number": "2",
       "name": "Collections, Access Policy and Anonymous Hardening",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "3",
@@ -29,5 +29,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 2 of 4 · executing"
   },
-  "updated_at": "2026-11-22T10:14:48.973Z"
+  "updated_at": "2026-11-22T10:21:31.154Z"
 }
