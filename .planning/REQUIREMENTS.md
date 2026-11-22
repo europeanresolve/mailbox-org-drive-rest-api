@@ -34,7 +34,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 - [x] **COLL-01**: Deployer can define collections in config, each with a JSON Schema, indexed fields and per-operation policies
 - [x] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
-- [ ] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
+- [x] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
 - [x] **COLL-04**: API consumer can get a single record by ID
 - [ ] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
 - [ ] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
@@ -151,7 +151,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-05 | Phase 1 | Complete |
 | COLL-01 | Phase 2 | Complete |
 | COLL-02 | Phase 2 | Complete |
-| COLL-03 | Phase 2 | Pending |
+| COLL-03 | Phase 2 | Complete |
 | COLL-04 | Phase 2 | Complete |
 | COLL-05 | Phase 2 | Pending |
 | COLL-06 | Phase 2 | Pending |

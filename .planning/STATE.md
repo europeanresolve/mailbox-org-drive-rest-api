@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-11-22T10:27:03.050Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-11-22T10:36:47.991Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: 7bc2f3508e133df738ec53530c42580df5097a34
+state_head: 75df61cae9dc7431bc2eeb8c31ccff0c21cae759
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 14
+  completed_plans: 15
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P12 | 10min | 2 tasks | 5 files |
 | Phase 02 P03 | 20min | 2 tasks | 5 files |
 | Phase 02 P01 | 9min | 3 tasks | 21 files |
+| Phase 02 P02 | 25min | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 02]: INVALID_PROPERTY_NAME checked at every schema depth; RESERVED_PROPERTY at root only
 - [Phase 02]: 400 pointers kept only for array indexes into real arrays or schema-declared property names
 - [Phase 02]: sibling $ref files must also resolve by realpath inside the config directory
+- [Phase 02]: 02-02: createdAt/updatedAt filter values normalised to toISOString form (calendar-checked), not compared as raw strings
+- [Phase 02]: 02-02: resolveIndexPath shared by startup checks and the list parser; cursor is strict base64url JSON {s,v,id} validated against sort and field type
 
 ### Pending Todos
 
@@ -128,6 +131,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:27:03.027Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-11-22T10:36:47.946Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
