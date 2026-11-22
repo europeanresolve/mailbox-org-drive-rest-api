@@ -22,13 +22,15 @@ export class RecordStore {
 		return this.#db.collection<RecordDocument>(`records_${name}`);
 	}
 
+	/** `id` is given when an idempotency entry chose it before the record existed. */
 	async insert(
 		name: string,
 		data: Record<string, unknown>,
+		id: string = crypto.randomUUID(),
 	): Promise<RecordDocument> {
 		const now = new Date().toISOString();
 		const document: RecordDocument = {
-			_id: crypto.randomUUID(),
+			_id: id,
 			_v: 1,
 			createdAt: now,
 			updatedAt: now,

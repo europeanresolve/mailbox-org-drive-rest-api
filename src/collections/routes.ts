@@ -6,6 +6,7 @@ import type { Db } from "mongodb";
 import {
 	ConfigKeyStore,
 	type KeyStore,
+	principalOf,
 	requireGrant,
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
@@ -16,6 +17,11 @@ import {
 	originGuard,
 	requireMediaType,
 } from "./hardening.ts";
+import {
+	canonicalHash,
+	IdempotencyStore,
+	parseIdempotencyKey,
+} from "./idempotency.ts";
 import { parseIfMatch } from "./if-match.ts";
 import {
 	encodeCursor,
@@ -88,6 +94,7 @@ export function registerCollections(
 	const keyStore = options.keyStore ?? new ConfigKeyStore(config.apiKeys);
 	const validators = compileCollections(config.collections);
 	const store = new RecordStore(db);
+	const idempotency = new IdempotencyStore(db);
 	// global: false, so only routes that attach a limiter hook are counted.
 	app.register(rateLimit, { global: false });
 
@@ -170,12 +177,66 @@ export function registerCollections(
 							if (errors !== null || !isPlainObject(body)) {
 								return reject(reply, 400, errors ?? []);
 							}
-							const created = await store.insert(name, body);
-							if (policy === "anonymous") {
-								return anonymousCreated(reply, created._id, created.createdAt);
+							const rawKey = request.headers["idempotency-key"];
+							if (rawKey === undefined) {
+								const created = await store.insert(name, body);
+								if (policy === "anonymous") {
+									return anonymousCreated(
+										reply,
+										created._id,
+										created.createdAt,
+									);
+								}
+								reply.status(201).header("etag", etag(created._v));
+								return toRecord(created);
 							}
-							reply.status(201).header("etag", etag(created._v));
-							return toRecord(created);
+							const key = parseIdempotencyKey(rawKey);
+							if (key === null) {
+								return reject(reply, 400, [{ keyword: "idempotencyKey" }]);
+							}
+							// Anonymous routes never read Authorization, so the principal is fixed (D-05).
+							const principal =
+								policy === "anonymous" ? "anonymous" : principalOf(request);
+							const begun = await idempotency.begin(
+								name,
+								key,
+								principal,
+								canonicalHash(body),
+							);
+							if (begun.kind === "mismatch") return reject(reply, 422);
+							if (begun.kind === "in-flight") return reject(reply, 409);
+							if (begun.kind === "replay") {
+								reply.status(begun.response.status);
+								reply.header("etag", begun.response.etag);
+								return begun.response.body;
+							}
+							let created: RecordDocument;
+							try {
+								created = await store.insert(name, body, begun.recordId);
+							} catch (error) {
+								// A duplicate id means an earlier attempt already stored the record.
+								const stored =
+									(error as { code?: number } | null)?.code === 11000
+										? await store.findById(name, begun.recordId)
+										: null;
+								if (stored === null) {
+									await idempotency.abandon(name, key);
+									throw error;
+								}
+								created = stored;
+							}
+							const payload =
+								policy === "anonymous"
+									? { id: created._id, createdAt: created.createdAt }
+									: toRecord(created);
+							const createdEtag = etag(policy === "anonymous" ? 1 : created._v);
+							await idempotency.complete(name, key, {
+								status: 201,
+								etag: createdEtag,
+								body: payload,
+							});
+							reply.status(201).header("etag", createdEtag);
+							return payload;
 						},
 					);
 				}
@@ -319,6 +380,8 @@ export function registerCollections(
 							if (!removed) {
 								return reject(reply, 404);
 							}
+							// The stored create response holds the deleted data (D-13).
+							await idempotency.removeForRecord(request.params.id);
 							return reply.status(204).send();
 						},
 					);

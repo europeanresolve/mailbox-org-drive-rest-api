@@ -18,6 +18,16 @@ export async function ensureIndexes(db: Db, config: Config): Promise<void> {
 			{ key: { updatedAt: 1, _id: 1 }, name: "idx_updatedAt" },
 		]);
 	}
+	await db.collection("_idempotency").createIndexes([
+		// Entries expire 24 h after creation (D-09); createdAt must be a BSON Date.
+		{
+			key: { createdAt: 1 },
+			name: "idx_ttl",
+			expireAfterSeconds: 86400,
+		},
+		// Deleting a record finds its entry by record id (D-13).
+		{ key: { recordId: 1 }, name: "idx_recordId" },
+	]);
 }
 
 /**

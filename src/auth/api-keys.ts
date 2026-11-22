@@ -50,6 +50,13 @@ export class ConfigKeyStore implements KeyStore {
 	}
 }
 
+const principals = new WeakMap<FastifyRequest, string>();
+
+/** Name of the API key that passed `requireGrant` for this request, else "anonymous". */
+export function principalOf(request: FastifyRequest): string {
+	return principals.get(request) ?? "anonymous";
+}
+
 /** The token after `Bearer` (scheme case-insensitive), or null for anything not exactly scheme plus one token. */
 function bearerToken(header: string | undefined): string | null {
 	if (header === undefined) return null;
@@ -85,6 +92,7 @@ export function requireGrant(
 		if (!key.grants.has(`${collection}:${operation}`)) {
 			return reply.status(403).type(PROBLEM_JSON).send(problem(403));
 		}
+		principals.set(request, key.name);
 		return undefined;
 	};
 }
