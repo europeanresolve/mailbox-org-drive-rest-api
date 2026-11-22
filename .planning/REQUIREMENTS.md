@@ -32,19 +32,19 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 ### Collections
 
-- [ ] **COLL-01**: Deployer can define collections in config, each with a JSON Schema, indexed fields and per-operation policies
-- [ ] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
+- [x] **COLL-01**: Deployer can define collections in config, each with a JSON Schema, indexed fields and per-operation policies
+- [x] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
 - [ ] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
-- [ ] **COLL-04**: API consumer can get a single record by ID
+- [x] **COLL-04**: API consumer can get a single record by ID
 - [ ] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
 - [ ] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
-- [ ] **COLL-07**: API consumer receives errors as `application/problem+json` without echoing submitted values
-- [ ] **COLL-08**: Anonymous create responds with only `id` and `createdAt`
+- [x] **COLL-07**: API consumer receives errors as `application/problem+json` without echoing submitted values
+- [x] **COLL-08**: Anonymous create responds with only `id` and `createdAt`
 
 ### Access & Hardening
 
-- [ ] **SEC-01**: Deployer can set each collection operation to `anonymous` or `apiKey`; anything unset is denied
-- [ ] **SEC-02**: API consumer can authenticate with an API key; keys are stored hashed, compared in constant time, and several can be active at once for rotation
+- [x] **SEC-01**: Deployer can set each collection operation to `anonymous` or `apiKey`; anything unset is denied
+- [x] **SEC-02**: API consumer can authenticate with an API key; keys are stored hashed, compared in constant time, and several can be active at once for rotation
 - [ ] **SEC-03**: Anonymous endpoints enforce a per-route body size limit, required `maxLength` on strings, and `Content-Type: application/json`
 - [ ] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
 - [ ] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
@@ -149,16 +149,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Complete |
 | STOR-05 | Phase 1 | Complete |
-| COLL-01 | Phase 2 | Pending |
-| COLL-02 | Phase 2 | Pending |
+| COLL-01 | Phase 2 | Complete |
+| COLL-02 | Phase 2 | Complete |
 | COLL-03 | Phase 2 | Pending |
-| COLL-04 | Phase 2 | Pending |
+| COLL-04 | Phase 2 | Complete |
 | COLL-05 | Phase 2 | Pending |
 | COLL-06 | Phase 2 | Pending |
-| COLL-07 | Phase 2 | Pending |
-| COLL-08 | Phase 2 | Pending |
-| SEC-01 | Phase 2 | Pending |
-| SEC-02 | Phase 2 | Pending |
+| COLL-07 | Phase 2 | Complete |
+| COLL-08 | Phase 2 | Complete |
+| SEC-01 | Phase 2 | Complete |
+| SEC-02 | Phase 2 | Complete |
 | SEC-03 | Phase 2 | Pending |
 | SEC-04 | Phase 2 | Pending |
 | SEC-05 | Phase 2 | Pending |

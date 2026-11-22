@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-11-22T10:21:32.023Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-11-22T10:27:03.050Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: 6d144117ff72d7e520fbcd0e62404e06d2d00b4f
+state_head: 7bc2f3508e133df738ec53530c42580df5097a34
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 2 of 8
+Plan: 3 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P10 | 12min | 3 tasks | 12 files |
 | Phase 01 P12 | 10min | 2 tasks | 5 files |
 | Phase 02 P03 | 20min | 2 tasks | 5 files |
+| Phase 02 P01 | 9min | 3 tasks | 21 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,10 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-10]: OX fixtures use synthetic ETags; lastModified null on OX (C-1) and NFD-vs-NFC path folding (C-2) are left for plan 01-12 and pinned by an it.fails replay case
 - [Phase 01]: [01-12] Keep NFC fold for OX NFD names (C-2); NFD files stay unreachable via adapter, listed as OX returns them
 - [Phase 02]: Kong file-log removes request-carrying fields via custom_fields_by_lua returning nil; kong:3.9.5 pinned (02-03)
+- [Phase 02]: allowUnionTypes true in createRecordAjv so nullable fields work under strict mode
+- [Phase 02]: INVALID_PROPERTY_NAME checked at every schema depth; RESERVED_PROPERTY at root only
+- [Phase 02]: 400 pointers kept only for array indexes into real arrays or schema-declared property names
+- [Phase 02]: sibling $ref files must also resolve by realpath inside the config directory
 
 ### Pending Todos
 
@@ -123,6 +128,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:21:31.957Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-11-22T10:27:03.027Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
