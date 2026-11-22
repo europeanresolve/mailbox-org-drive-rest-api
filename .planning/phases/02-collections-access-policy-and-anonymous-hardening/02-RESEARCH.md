@@ -901,21 +901,13 @@ console.log(`apiKeys:\n  - name: my-key\n    hash: "${hash}"\n    grants: []`);
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`@fastify/rate-limit` + `trustProxy` CIDR list**
-   - What we know: D-10 says `server.trustProxy` is a list of proxy IPs/CIDRs. Fastify's `server.trustProxy` accepts a string/array/function.
-   - What's unclear: Whether `@fastify/rate-limit` reads Fastify's native `trustProxy` setting automatically or needs its own `trustProxy` config.
-   - Recommendation: Register `@fastify/rate-limit` after setting `app.server.trustProxy` in `buildApp`; test with a forged `X-Forwarded-For` from a non-trusted IP.
+1. **`@fastify/rate-limit` + `trustProxy` CIDR list** — RESOLVED in 02-05-PLAN.md: set `server.trustProxy` from config before registering rate limit; integration test proves forged `X-Forwarded-For` from a non-trusted IP does not bypass per-IP limits.
 
-2. **`application/merge-patch+json` content type parser**
-   - What we know: Fastify does not parse `application/merge-patch+json` by default.
-   - What's unclear: Whether to register a global content-type parser for it or one per PATCH route.
-   - Recommendation: Register per collection plugin (encapsulated scope), so only PATCH routes in that scope accept it.
+2. **`application/merge-patch+json` content type parser** — RESOLVED in 02-04-PLAN.md and 02-06-PLAN.md: register the parser per collection plugin (encapsulated scope); PATCH validates merged document with strict Ajv after RFC 7396 merge.
 
-3. **`/docs` on/off toggle**
-   - What we know: This is Claude's discretion.
-   - Recommendation: Off by default to minimize attack surface; a `server.docs: true` config flag enables it. Deployers who need OpenAPI can enable it explicitly.
+3. **`/docs` on/off toggle** — RESOLVED in 02-08-PLAN.md: OpenAPI/Swagger UI disabled unless `server.docs: true` in config; `/docs` not registered when off.
 
 ---
 
