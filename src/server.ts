@@ -47,6 +47,7 @@ export async function start(
 				mongoPing: mongo.ping,
 				driveState: () => driveHealth?.state() ?? "unknown",
 			},
+			collections: { config, db: mongo.client.db() },
 		});
 		driveHealth = createDriveHealth({
 			probe: () => adapter.stat(mounts.get(firstMount).root),
@@ -63,6 +64,8 @@ export async function start(
 					name,
 					mode,
 				})),
+				// Names only: schemas and keys never reach a log.
+				collections: Object.keys(config.collections),
 			},
 			"configuration loaded",
 		);

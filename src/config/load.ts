@@ -309,6 +309,8 @@ function withDefaults(document: Record<string, unknown>): Config {
 			},
 		},
 		mounts: document.mounts as Config["mounts"],
+		collections: (document.collections ?? {}) as Config["collections"],
+		apiKeys: (document.apiKeys ?? []) as Config["apiKeys"],
 	};
 }
 

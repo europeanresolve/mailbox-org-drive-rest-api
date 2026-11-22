@@ -13,6 +13,29 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export const MOUNT_NAME_PATTERN = "^[a-z][a-z0-9-]{0,31}$";
 
+export const COLLECTION_OPERATIONS = [
+	"create",
+	"get",
+	"list",
+	"replace",
+	"patch",
+	"delete",
+] as const;
+export type CollectionOperation = (typeof COLLECTION_OPERATIONS)[number];
+
+export const COLLECTION_POLICIES = ["anonymous", "apiKey"] as const;
+export type CollectionPolicy = (typeof COLLECTION_POLICIES)[number];
+
+const operationsSchema = Type.Object(
+	Object.fromEntries(
+		COLLECTION_OPERATIONS.map((op) => [
+			op,
+			Type.Optional(Type.Enum([...COLLECTION_POLICIES])),
+		]),
+	),
+	{ additionalProperties: false },
+);
+
 // additionalProperties false at every level: an unknown key is a typo, not an extension.
 // Type.Enum (not a Union of Literals) keeps one bad value to one issue.
 export const ConfigSchema = Type.Object(
@@ -60,6 +83,32 @@ export const ConfigSchema = Type.Object(
 			),
 			{ additionalProperties: false, minProperties: 1 },
 		),
+		// The schema is the deployer's JSON Schema; strict Ajv checks it in the semantic stage.
+		collections: Type.Optional(
+			Type.Record(
+				Type.String({ pattern: MOUNT_NAME_PATTERN }),
+				Type.Object(
+					{
+						schema: Type.Record(Type.String(), Type.Unknown()),
+						operations: operationsSchema,
+					},
+					{ additionalProperties: false },
+				),
+				{ additionalProperties: false },
+			),
+		),
+		apiKeys: Type.Optional(
+			Type.Array(
+				Type.Object(
+					{
+						name: Type.String({ pattern: MOUNT_NAME_PATTERN }),
+						hash: Type.String({ pattern: "^[0-9a-f]{64}$" }),
+						grants: Type.Array(Type.String({ minLength: 1 })),
+					},
+					{ additionalProperties: false },
+				),
+			),
+		),
 	},
 	{ additionalProperties: false },
 );
@@ -85,4 +134,17 @@ export type Config = {
 			readonly mode: "read" | "read-write";
 		};
 	};
+	readonly collections: {
+		readonly [name: string]: {
+			readonly schema: { readonly [keyword: string]: unknown };
+			readonly operations: {
+				readonly [op in CollectionOperation]?: CollectionPolicy;
+			};
+		};
+	};
+	readonly apiKeys: readonly {
+		readonly name: string;
+		readonly hash: string;
+		readonly grants: readonly string[];
+	}[];
 };

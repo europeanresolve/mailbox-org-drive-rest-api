@@ -169,10 +169,13 @@ describe("tracer: anonymous create and apiKey get through start()", () => {
 				["GET", "/v1/contact"],
 			];
 			for (const [method, path] of attempts) {
+				const withBody = method === "PUT" || method === "PATCH";
 				const res = await app.fetch(path, {
 					method,
-					headers: { ...auth, "content-type": "application/json" },
-					...(method === "PUT" || method === "PATCH" ? { body: "{}" } : {}),
+					headers: withBody
+						? { ...auth, "content-type": "application/json" }
+						: auth,
+					...(withBody ? { body: "{}" } : {}),
 				});
 				expect(res.status, `${method} ${path}`).toBe(404);
 				expect(res.headers.get("content-type")).toContain(
