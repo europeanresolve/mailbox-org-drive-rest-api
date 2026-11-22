@@ -301,12 +301,35 @@ function inDocumentOrder(
 
 // --- result ------------------------------------------------------------------
 
+const DEFAULT_RATE_LIMIT = { max: 10, windowSeconds: 60 };
+
+function withRateLimitDefaults(collections: unknown): Config["collections"] {
+	return Object.fromEntries(
+		Object.entries(
+			(collections ?? {}) as Record<string, Record<string, unknown>>,
+		).map(([name, entry]) => [
+			name,
+			{
+				...entry,
+				rateLimit: {
+					...DEFAULT_RATE_LIMIT,
+					...(entry.rateLimit as object | undefined),
+				},
+			},
+		]),
+	) as Config["collections"];
+}
+
 function withDefaults(document: Record<string, unknown>): Config {
 	const server = (document.server ?? {}) as Partial<Config["server"]>;
 	const webdav = (document.storage as { webdav: Record<string, unknown> })
 		.webdav;
 	return {
-		server: { port: server.port ?? 3000, logLevel: server.logLevel ?? "info" },
+		server: {
+			port: server.port ?? 3000,
+			logLevel: server.logLevel ?? "info",
+			trustProxy: server.trustProxy ?? [],
+		},
 		mongo: document.mongo as Config["mongo"],
 		storage: {
 			webdav: {
@@ -315,7 +338,7 @@ function withDefaults(document: Record<string, unknown>): Config {
 			},
 		},
 		mounts: document.mounts as Config["mounts"],
-		collections: (document.collections ?? {}) as Config["collections"],
+		collections: withRateLimitDefaults(document.collections),
 		apiKeys: (document.apiKeys ?? []) as Config["apiKeys"],
 	};
 }

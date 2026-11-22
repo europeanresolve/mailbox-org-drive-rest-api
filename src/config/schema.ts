@@ -46,6 +46,7 @@ export const ConfigSchema = Type.Object(
 					// 0 = ephemeral port, used by tests.
 					port: Type.Optional(Type.Integer({ minimum: 0, maximum: 65535 })),
 					logLevel: Type.Optional(Type.Enum([...LOG_LEVELS])),
+					trustProxy: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 				},
 				{ additionalProperties: false },
 			),
@@ -92,6 +93,15 @@ export const ConfigSchema = Type.Object(
 						schema: Type.Record(Type.String(), Type.Unknown()),
 						operations: operationsSchema,
 						indexes: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+						rateLimit: Type.Optional(
+							Type.Object(
+								{
+									max: Type.Optional(Type.Integer({ minimum: 1 })),
+									windowSeconds: Type.Optional(Type.Integer({ minimum: 1 })),
+								},
+								{ additionalProperties: false },
+							),
+						),
 						cors: Type.Optional(
 							Type.Object(
 								{ origins: Type.Array(Type.String({ minLength: 1 })) },
@@ -125,6 +135,8 @@ export type Config = {
 	readonly server: {
 		readonly port: number;
 		readonly logLevel: LogLevel;
+		/** Proxy IPs or CIDRs whose X-Forwarded-For is believed; empty means none. */
+		readonly trustProxy: readonly string[];
 	};
 	readonly mongo: { readonly uri: string };
 	readonly storage: {
@@ -151,6 +163,11 @@ export type Config = {
 			readonly indexes?: readonly string[];
 			/** Browser origins allowed to call the collection; none when absent. */
 			readonly cors?: { readonly origins: readonly string[] };
+			/** In-app limit per client IP on the collection's anonymous operations. */
+			readonly rateLimit: {
+				readonly max: number;
+				readonly windowSeconds: number;
+			};
 		};
 	};
 	readonly apiKeys: readonly {

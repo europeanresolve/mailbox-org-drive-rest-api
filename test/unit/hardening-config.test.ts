@@ -107,3 +107,93 @@ describe("collections.<name>.cors.origins", () => {
 		expect(JSON.stringify(issues)).not.toContain("CANARY");
 	});
 });
+
+describe("server.trustProxy", () => {
+	it("loads IPs and CIDRs of both families", () => {
+		const config = load(
+			{},
+			{ trustProxy: ["10.0.0.0/8", "192.0.2.1", "2001:db8::/32"] },
+		);
+		expect(config.server.trustProxy).toEqual([
+			"10.0.0.0/8",
+			"192.0.2.1",
+			"2001:db8::/32",
+		]);
+	});
+
+	it("is an empty list when absent", () => {
+		expect(load().server.trustProxy).toEqual([]);
+	});
+
+	it("rejects a bad prefix, a non-address and an empty prefix at the entry's index", () => {
+		const found = codes(
+			issuesOf(() =>
+				load({}, { trustProxy: ["10.0.0.0/33", "not-an-ip", "10.0.0.1/"] }),
+			),
+		);
+		expect(found).toEqual([
+			"server.INVALID_TRUST_PROXY /server/trustProxy/0",
+			"server.INVALID_TRUST_PROXY /server/trustProxy/1",
+			"server.INVALID_TRUST_PROXY /server/trustProxy/2",
+		]);
+	});
+
+	it("rejects an IPv6 prefix above 128, a signed prefix and the boolean form", () => {
+		const found = codes(
+			issuesOf(() =>
+				load({}, { trustProxy: ["2001:db8::/129", "10.0.0.0/-1", "true"] }),
+			),
+		);
+		expect(found).toHaveLength(3);
+		expect(
+			found.every((entry) => entry.startsWith("server.INVALID_TRUST_PROXY")),
+		).toBe(true);
+	});
+
+	it("never carries the rejected value in an issue", () => {
+		const issues = issuesOf(() =>
+			load({}, { trustProxy: ["CANARY-7f3a@example.invalid"] }),
+		);
+		expect(JSON.stringify(issues)).not.toContain("CANARY");
+	});
+});
+
+describe("collections.<name>.rateLimit", () => {
+	it("defaults to 10 requests per 60 seconds", () => {
+		expect(load().collections.contact?.rateLimit).toEqual({
+			max: 10,
+			windowSeconds: 60,
+		});
+	});
+
+	it("fills only the missing half", () => {
+		expect(
+			load({ rateLimit: { max: 3 } }).collections.contact?.rateLimit,
+		).toEqual({
+			max: 3,
+			windowSeconds: 60,
+		});
+		expect(
+			load({ rateLimit: { windowSeconds: 5 } }).collections.contact?.rateLimit,
+		).toEqual({ max: 10, windowSeconds: 5 });
+	});
+
+	it("rejects zero for either number", () => {
+		expect(codes(issuesOf(() => load({ rateLimit: { max: 0 } })))).toEqual([
+			"schema.minimum /collections/contact/rateLimit/max",
+		]);
+		expect(
+			codes(issuesOf(() => load({ rateLimit: { windowSeconds: 0 } }))),
+		).toEqual(["schema.minimum /collections/contact/rateLimit/windowSeconds"]);
+	});
+
+	it("rejects an unknown key and a fractional number", () => {
+		const found = codes(
+			issuesOf(() => load({ rateLimit: { max: 1.5, burst: 3 } })),
+		);
+		expect(found).toContain("schema.type /collections/contact/rateLimit/max");
+		expect(found).toContain(
+			"schema.additionalProperties /collections/contact/rateLimit/burst",
+		);
+	});
+});
