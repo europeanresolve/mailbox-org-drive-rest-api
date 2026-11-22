@@ -20,6 +20,14 @@ mongo:
 # server:
 #   port: 3000
 #   logLevel: info          # fatal, error, warn, info, debug, trace or silent
+#   # Only the addresses of the proxies in front of the API (for example Kong),
+#   # never anything else: it decides whose X-Forwarded-For header is believed,
+#   # which the per-IP rate limit of anonymous routes depends on. Default: none.
+#   trustProxy: [10.0.0.0/8]
+#   # Serve the OpenAPI 3.1 document at /docs/json and a UI at /docs. Default:
+#   # false. It lists collection names and schemas, so keep it off in production
+#   # or restrict /docs at the gateway.
+#   docs: true
 
 # Mount names appear in API URLs. The real Drive paths below never appear in
 # URLs or logs. Names: lowercase letters, digits and "-", starting with a letter.
@@ -31,3 +39,64 @@ mounts:
   content:
     path: /Userstore/Example Service/content
     mode: read
+
+# A collection is a set of JSON records served at /v1/<name> (names follow the same
+# rules as mounts). Everything here is synthetic: replace it with your own.
+collections:
+  contact:
+    # JSON Schema (draft 2020-12) for one record. It must be a closed object
+    # (additionalProperties: false) and, because "create" is anonymous, every
+    # string needs a maxLength. Alternatively point at a file next to this one:
+    #   schema: { $ref: contact.schema.json }
+    schema:
+      type: object
+      additionalProperties: false
+      required: [name, email, topic, message]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 254 }
+        topic: { type: string, maxLength: 40 }
+        message: { type: string, minLength: 1, maxLength: 4000 }
+
+    # Per operation: anonymous (anyone) or apiKey (a key with the grant
+    # "contact:<operation>"). An operation that is not listed does not exist
+    # (404). Think twice before making get or list anonymous: every record,
+    # including personal data, would be readable by anyone who can reach the API.
+    operations:
+      create: anonymous       # POST   /v1/contact
+      list: apiKey            # GET    /v1/contact
+      get: apiKey             # GET    /v1/contact/{id}
+      delete: apiKey          # DELETE /v1/contact/{id}
+      # replace: apiKey       # PUT    /v1/contact/{id}   (If-Match optional)
+      # patch: apiKey         # PATCH  /v1/contact/{id}   (JSON Merge Patch)
+
+    # Fields list may filter and sort on (besides createdAt and updatedAt). Each
+    # must be a required scalar in the schema.
+    indexes: [topic]
+
+    # Name of a hidden form field that only bots fill. A submission that fills it
+    # gets a fake 201 and nothing is stored. It must not appear in the schema.
+    honeypot: website
+
+    # Browser origins allowed to call this collection (exact scheme://host[:port]).
+    # Without it, a request carrying any Origin header is refused with 403.
+    cors:
+      origins: ["https://www.example.org"]
+
+    # Per client IP, on this collection's anonymous operations (defaults shown).
+    rateLimit:
+      max: 10
+      windowSeconds: 60
+
+    # Largest request body in bytes (default 16384, at most 1048576).
+    bodyLimit: 16384
+
+# API keys for apiKey operations. Only the SHA-256 hash is stored here. Make a key
+# with `pnpm keygen` (in the image: `node dist/keygen.js`), give the printed key to
+# the caller and paste the printed hash below. The hash here is 64 zeros: it
+# matches no key, so it is safe to leave in place but useless until replaced.
+# Grants are exact "<collection>:<operation>" pairs; there are no wildcards.
+apiKeys:
+  - name: website-backend
+    hash: "0000000000000000000000000000000000000000000000000000000000000000"
+    grants: ["contact:list", "contact:get", "contact:delete"]
