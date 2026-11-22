@@ -13,7 +13,7 @@ Milestone v1.0 takes the project from an empty repository to a self-hostable RES
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Foundations, OX Spike and Storage Layer** - Local stack, CI, fail-fast config, PII-free logs, WebDAV compatibility matrix, and a path-safe StorageAdapter
-- [ ] **Phase 2: Collections, Access Policy and Anonymous Hardening** - Config-defined collections with strict validation, CRUD, default-deny policy, API keys, and abuse-resistant anonymous form submission
+- [x] **Phase 2: Collections, Access Policy and Anonymous Hardening** - Config-defined collections with strict validation, CRUD, default-deny policy, API keys, and abuse-resistant anonymous form submission (completed 2026-11-22)
 - [ ] **Phase 3: Mirror Worker** - Debounced, single-writer, formula-safe `.xlsx` mirror per collection with recovery and operator status
 - [ ] **Phase 4: Read-only Content** - Sheets as JSON, `.docx` as Markdown and file downloads from an ETag-validated cache with stale-if-error
 
@@ -50,24 +50,24 @@ Plans (listed in wave order):
 **Goal**: A website can safely submit forms to anonymous create endpoints, and deployers can manage records through API-key-protected CRUD, all defined in config with default-deny access.
 **Mode:** mvp
 **Depends on**: Phase 1
-**Requirements**: COLL-01, COLL-02, COLL-03, COLL-04, COLL-05, COLL-06, COLL-07, COLL-08, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, SEC-07, SEC-08, SEC-09, FND-04
+**Requirements**: COLL-01, COLL-02, COLL-03, COLL-04, COLL-05, COLL-06, COLL-07, COLL-08, SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, SEC-08, SEC-09, FND-04
 **Success Criteria** (what must be TRUE):
   1. Deployer defines a collection in config (JSON Schema, indexed fields, per-operation policies), startup rejects an invalid definition, and API consumer can open an OpenAPI 3.1 document and UI at `/docs` that includes per-collection schemas generated from that config
-  2. A website form POST creates a record: a valid payload gets a server-generated UUID, `createdAt` and `updatedAt` (anonymous callers receive only `id` and `createdAt`); a wrong type, extra property or over-long string is rejected, never coerced or stripped, with an `application/problem+json` error that does not echo submitted values; a filled honeypot field is silently discarded; a failed CAPTCHA verification is rejected; a retry with the same `Idempotency-Key` returns the original result and creates no duplicate
+  2. A website form POST creates a record: a valid payload gets a server-generated UUID, `createdAt` and `updatedAt` (anonymous callers receive only `id` and `createdAt`); a wrong type, extra property or over-long string is rejected, never coerced or stripped, with an `application/problem+json` error that does not echo submitted values; a filled honeypot field is silently discarded; a retry with the same `Idempotency-Key` returns the original result and creates no duplicate
   3. API consumer can get a record by ID, list records with cursor pagination and equality/range filters on indexed fields only (a filter on a non-indexed field is rejected), replace a record (PUT), merge-patch it (RFC 7396, validated after merge), and delete it
   4. Every collection operation is denied unless set to `anonymous` or `apiKey`; a request with a missing or wrong API key is rejected; keys are stored hashed and compared in constant time, and two keys can be active at once so one can be rotated out without downtime
   5. Anonymous endpoints reject an oversized body, a non-`application/json` content type, and a browser request from an origin not allowed for that collection; the per-IP rate limit still holds when a client forges `X-Forwarded-For`; and the repository provides a Kong reference config in `deploy/` that rate-limits and logs only method, route and status
-**Plans:** 8 plans
+**Plans:** 8/8 plans complete
 
 Plans (listed in wave order):
-- [ ] 02-01-PLAN.md — Tracer: package legitimacy gate, one config collection, anonymous POST and API-key GET with strict validation, key hashing and keygen (wave 1)
-- [ ] 02-03-PLAN.md — Kong reference config with behavioural check, README gateway section, SEC-07 dropped per D-07 (wave 1)
-- [ ] 02-02-PLAN.md — List with cursor paging, filters and sort on indexed fields only, index creation (wave 2)
-- [ ] 02-04-PLAN.md — PUT, RFC 7396 merge-patch validated after merge, DELETE, If-Match (wave 3)
-- [ ] 02-05-PLAN.md — Per-collection CORS and per-IP rate limit that resists forged X-Forwarded-For (wave 4)
-- [ ] 02-06-PLAN.md — Body size limit, JSON-only content type, honeypot (wave 5)
-- [ ] 02-07-PLAN.md — Idempotency-Key on create (wave 6)
-- [ ] 02-08-PLAN.md — OpenAPI 3.1 at `/docs` from config, example config, README, end-to-end canary sweep (wave 6)
+- [x] 02-01-PLAN.md — Tracer: package legitimacy gate, one config collection, anonymous POST and API-key GET with strict validation, key hashing and keygen (wave 1)
+- [x] 02-03-PLAN.md — Kong reference config with behavioural check, README gateway section, SEC-07 dropped per D-07 (wave 1)
+- [x] 02-02-PLAN.md — List with cursor paging, filters and sort on indexed fields only, index creation (wave 2)
+- [x] 02-04-PLAN.md — PUT, RFC 7396 merge-patch validated after merge, DELETE, If-Match (wave 3)
+- [x] 02-05-PLAN.md — Per-collection CORS and per-IP rate limit that resists forged X-Forwarded-For (wave 4)
+- [x] 02-06-PLAN.md — Body size limit, JSON-only content type, honeypot (wave 5)
+- [x] 02-07-PLAN.md — Idempotency-Key on create (wave 6)
+- [x] 02-08-PLAN.md — OpenAPI 3.1 at `/docs` from config, example config, README, end-to-end canary sweep (wave 6)
 
 ### Phase 3: Mirror Worker
 **Goal**: Staff open an always-current `.xlsx` per collection in their Drive, written safely by a single background writer, without anyone calling the API.
@@ -103,6 +103,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundations, OX Spike and Storage Layer | 12/12 | In Progress | - |
-| 2. Collections, Access Policy and Anonymous Hardening | 0/TBD | Not started | - |
+| 2. Collections, Access Policy and Anonymous Hardening | 8/8 | Complete    | 2026-11-22 |
 | 3. Mirror Worker | 0/TBD | Not started | - |
 | 4. Read-only Content | 0/TBD | Not started | - |

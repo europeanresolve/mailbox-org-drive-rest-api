@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
+import { isIP } from "node:net";
+import { dirname, resolve } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { type Document, isNode, parseDocument } from "yaml";
+import {
+	apiKeyIssues,
+	collectionIssues,
+	resolveSchemaRefs,
+} from "../collections/definition.ts";
 import {
 	buildMounts,
 	type MountDef,
@@ -9,6 +16,7 @@ import {
 import {
 	type Config,
 	ConfigSchema,
+	DEFAULT_BODY_LIMIT,
 	LOG_LEVELS,
 	MOUNT_NAME_PATTERN,
 } from "./schema.ts";
@@ -250,6 +258,37 @@ function webdavUrlIssue(
 	return { code: "storage.INSECURE_URL", at };
 }
 
+/** An IP, or `<ip>/<prefix>` with prefix 0..32 (IPv4) or 0..128 (IPv6). Zones and bare booleans are not accepted. */
+function isTrustProxyEntry(entry: string): boolean {
+	const slash = entry.indexOf("/");
+	const address = slash === -1 ? entry : entry.slice(0, slash);
+	const family = isIP(address);
+	if (family === 0 || address.includes("%")) return false;
+	if (slash === -1) return true;
+	const prefix = entry.slice(slash + 1);
+	return (
+		/^(0|[1-9]\d{0,2})$/.test(prefix) &&
+		Number(prefix) <= (family === 4 ? 32 : 128)
+	);
+}
+
+/** The issue names the index only, never the entry (D-10). */
+function trustProxyIssues(document: unknown): ConfigIssue[] {
+	if (!isRecord(document) || !isRecord(document.server)) return [];
+	const { trustProxy } = document.server;
+	if (!Array.isArray(trustProxy)) return [];
+	const issues: ConfigIssue[] = [];
+	trustProxy.forEach((entry, index) => {
+		if (typeof entry === "string" && !isTrustProxyEntry(entry)) {
+			issues.push({
+				code: "server.INVALID_TRUST_PROXY",
+				at: `/server/trustProxy/${index}`,
+			});
+		}
+	});
+	return issues;
+}
+
 function mountIssues(document: unknown, failed: Set<string>): ConfigIssue[] {
 	if (!isRecord(document) || !isRecord(document.mounts)) return [];
 	const defs: Record<string, MountDef> = {};
@@ -295,12 +334,38 @@ function inDocumentOrder(
 
 // --- result ------------------------------------------------------------------
 
+const DEFAULT_RATE_LIMIT = { max: 10, windowSeconds: 60 };
+
+function withCollectionDefaults(collections: unknown): Config["collections"] {
+	return Object.fromEntries(
+		Object.entries(
+			(collections ?? {}) as Record<string, Record<string, unknown>>,
+		).map(([name, entry]) => [
+			name,
+			{
+				...entry,
+				bodyLimit:
+					(entry.bodyLimit as number | undefined) ?? DEFAULT_BODY_LIMIT,
+				rateLimit: {
+					...DEFAULT_RATE_LIMIT,
+					...(entry.rateLimit as object | undefined),
+				},
+			},
+		]),
+	) as Config["collections"];
+}
+
 function withDefaults(document: Record<string, unknown>): Config {
 	const server = (document.server ?? {}) as Partial<Config["server"]>;
 	const webdav = (document.storage as { webdav: Record<string, unknown> })
 		.webdav;
 	return {
-		server: { port: server.port ?? 3000, logLevel: server.logLevel ?? "info" },
+		server: {
+			port: server.port ?? 3000,
+			logLevel: server.logLevel ?? "info",
+			trustProxy: server.trustProxy ?? [],
+			docs: server.docs ?? false,
+		},
 		mongo: document.mongo as Config["mongo"],
 		storage: {
 			webdav: {
@@ -309,6 +374,8 @@ function withDefaults(document: Record<string, unknown>): Config {
 			},
 		},
 		mounts: document.mounts as Config["mounts"],
+		collections: withCollectionDefaults(document.collections),
+		apiKeys: (document.apiKeys ?? []) as Config["apiKeys"],
 	};
 }
 
@@ -336,12 +403,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	const envIssues = collector();
 	const failed = new Set<string>();
 	const resolved = interpolate(doc.toJS() ?? {}, "", env, failed, envIssues);
-	const document = applyEnvOverrides(resolved, env, envIssues);
+	const overridden = applyEnvOverrides(resolved, env, envIssues);
 
-	const semantic: ConfigIssue[] = [];
+	// Sibling-file schemas are read before the schema stage; ones that fail are not checked twice.
+	const refs = resolveSchemaRefs(overridden, dirname(resolve(path)));
+	const document = refs.document;
+	for (const at of refs.failed) failed.add(at);
+
+	const semantic: ConfigIssue[] = [...refs.issues];
 	const urlIssue = webdavUrlIssue(document, failed);
 	if (urlIssue !== undefined) semantic.push(urlIssue);
+	semantic.push(...trustProxyIssues(document));
 	semantic.push(...mountIssues(document, failed));
+	semantic.push(...collectionIssues(document, failed));
+	semantic.push(...apiKeyIssues(document, failed));
 
 	const issues = [
 		...envIssues.issues,

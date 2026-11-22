@@ -12,7 +12,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **FND-01**: Deployer can configure the service from a config file plus environment variables (secrets also via `*_FILE`), and startup fails fast listing every config error
 - [x] **FND-02**: Operator can call `/health` (process alive) and `/ready` (MongoDB reachable; Drive outage reported but does not fail readiness)
 - [x] **FND-03**: Operator gets structured pino logs that contain no personal data (route templates not raw URLs, no bodies, no Mongo/Ajv error values), enforced by a CI canary-string test across error paths
-- [ ] **FND-04**: API consumer can read an OpenAPI 3.1 document and UI at `/docs`, including per-collection schemas generated from config
+- [x] **FND-04**: API consumer can read an OpenAPI 3.1 document and UI at `/docs`, including per-collection schemas generated from config
 - [ ] **FND-05**: Deployer can run the service as a single container image with roles `api`, `worker` or `all`, needing only MongoDB (no Kong or Keycloak)
 
 ### Developer Experience
@@ -32,26 +32,25 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 ### Collections
 
-- [ ] **COLL-01**: Deployer can define collections in config, each with a JSON Schema, indexed fields and per-operation policies
-- [ ] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
-- [ ] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
-- [ ] **COLL-04**: API consumer can get a single record by ID
-- [ ] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
-- [ ] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
-- [ ] **COLL-07**: API consumer receives errors as `application/problem+json` without echoing submitted values
-- [ ] **COLL-08**: Anonymous create responds with only `id` and `createdAt`
+- [x] **COLL-01**: Deployer can define collections in config, each with a JSON Schema, indexed fields and per-operation policies
+- [x] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
+- [x] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
+- [x] **COLL-04**: API consumer can get a single record by ID
+- [x] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
+- [x] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
+- [x] **COLL-07**: API consumer receives errors as `application/problem+json` without echoing submitted values
+- [x] **COLL-08**: Anonymous create responds with only `id` and `createdAt`
 
 ### Access & Hardening
 
-- [ ] **SEC-01**: Deployer can set each collection operation to `anonymous` or `apiKey`; anything unset is denied
-- [ ] **SEC-02**: API consumer can authenticate with an API key; keys are stored hashed, compared in constant time, and several can be active at once for rotation
-- [ ] **SEC-03**: Anonymous endpoints enforce a per-route body size limit, required `maxLength` on strings, and `Content-Type: application/json`
-- [ ] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
-- [ ] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
-- [ ] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
-- [ ] **SEC-07**: Deployer can enable a CAPTCHA verification hook (Turnstile / hCaptcha / reCAPTCHA-style siteverify) per collection
-- [ ] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
-- [ ] **SEC-09**: Repository provides a Kong reference gateway config in `deploy/` (rate limiting, logging of method/route/status only)
+- [x] **SEC-01**: Deployer can set each collection operation to `anonymous` or `apiKey`; anything unset is denied
+- [x] **SEC-02**: API consumer can authenticate with an API key; keys are stored hashed, compared in constant time, and several can be active at once for rotation
+- [x] **SEC-03**: Anonymous endpoints enforce a per-route body size limit, required `maxLength` on strings, and `Content-Type: application/json`
+- [x] **SEC-04**: Deployer can set allowed CORS origins per collection; browser requests from other origins are rejected
+- [x] **SEC-05**: Anonymous endpoints are rate limited per client IP in-app, with `trustProxy` configured so forged `X-Forwarded-For` cannot bypass it
+- [x] **SEC-06**: Form submissions with a filled honeypot field are silently discarded
+- [x] **SEC-08**: API consumer can send an `Idempotency-Key` on create; retries with the same key return the original result instead of a duplicate record
+- [x] **SEC-09**: Repository provides a Kong reference gateway config in `deploy/` (rate limiting, logging of method/route/status only)
 
 ### Spreadsheet Mirror
 
@@ -128,6 +127,7 @@ Deferred to later milestones. Tracked but not in the current roadmap.
 | Multipart file attachments on records | Large attack surface; object storage is v3.0 |
 | Query DSL, relations, realtime, full-text search | Beyond scope for tens of writes a week |
 | Relying on WebDAV locks or `If-Match` conditional writes | Unverified on OX and unenforced by dev servers |
+| CAPTCHA verification inside the API (SEC-07) | Dropped in Phase 2 discussion (D-07): CAPTCHA is the caller's job; anonymous endpoints rely on honeypot, rate limit, CORS and the gateway |
 
 ## Traceability
 
@@ -138,7 +138,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-01 | Phase 1 | Complete |
 | FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 1 | Complete |
-| FND-04 | Phase 2 | Pending |
+| FND-04 | Phase 2 | Complete |
 | FND-05 | Phase 3 | Pending |
 | DEV-01 | Phase 1 | Complete |
 | DEV-02 | Phase 1 | Complete |
@@ -149,23 +149,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STOR-03 | Phase 1 | Complete |
 | STOR-04 | Phase 1 | Complete |
 | STOR-05 | Phase 1 | Complete |
-| COLL-01 | Phase 2 | Pending |
-| COLL-02 | Phase 2 | Pending |
-| COLL-03 | Phase 2 | Pending |
-| COLL-04 | Phase 2 | Pending |
-| COLL-05 | Phase 2 | Pending |
-| COLL-06 | Phase 2 | Pending |
-| COLL-07 | Phase 2 | Pending |
-| COLL-08 | Phase 2 | Pending |
-| SEC-01 | Phase 2 | Pending |
-| SEC-02 | Phase 2 | Pending |
-| SEC-03 | Phase 2 | Pending |
-| SEC-04 | Phase 2 | Pending |
-| SEC-05 | Phase 2 | Pending |
-| SEC-06 | Phase 2 | Pending |
-| SEC-07 | Phase 2 | Pending |
-| SEC-08 | Phase 2 | Pending |
-| SEC-09 | Phase 2 | Pending |
+| COLL-01 | Phase 2 | Complete |
+| COLL-02 | Phase 2 | Complete |
+| COLL-03 | Phase 2 | Complete |
+| COLL-04 | Phase 2 | Complete |
+| COLL-05 | Phase 2 | Complete |
+| COLL-06 | Phase 2 | Complete |
+| COLL-07 | Phase 2 | Complete |
+| COLL-08 | Phase 2 | Complete |
+| SEC-01 | Phase 2 | Complete |
+| SEC-02 | Phase 2 | Complete |
+| SEC-03 | Phase 2 | Complete |
+| SEC-04 | Phase 2 | Complete |
+| SEC-05 | Phase 2 | Complete |
+| SEC-06 | Phase 2 | Complete |
+| SEC-07 | Phase 2 | Dropped |
+| SEC-08 | Phase 2 | Complete |
+| SEC-09 | Phase 2 | Complete |
 | MIRR-01 | Phase 3 | Pending |
 | MIRR-02 | Phase 3 | Pending |
 | MIRR-03 | Phase 3 | Pending |
@@ -187,10 +187,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-11 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 50 total
-- Mapped to phases: 50
+- v1 requirements: 49 total
+- Mapped to phases: 49
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-11-21*
 *Last updated: 2026-11-21 after roadmap creation (traceability filled; coverage corrected from 48 to 50)*
+*Last updated: 2026-11-22 after Phase 2 plan 02-03: SEC-07 (CAPTCHA siteverify) dropped per D-07, moved to Out of Scope; coverage 50 to 49*

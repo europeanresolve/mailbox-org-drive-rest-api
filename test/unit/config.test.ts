@@ -316,13 +316,20 @@ describe("loadConfig: PORT and LOG_LEVEL overrides", () => {
 		const config = loadConfig(
 			envFor(text, { ...PASSWORD_ENV, PORT: "8080", LOG_LEVEL: "debug" }),
 		);
-		eq(config.server).toEqual({ port: 8080, logLevel: "debug" });
+		eq(config.server).toEqual({
+			port: 8080,
+			logLevel: "debug",
+			trustProxy: [],
+			docs: false,
+		});
 	});
 
 	it("without overrides the file value is kept", () => {
 		eq(loadConfig(envFor(text)).server).toEqual({
 			port: 4000,
 			logLevel: "warn",
+			trustProxy: [],
+			docs: false,
 		});
 	});
 
@@ -454,7 +461,12 @@ describe("loadConfig: result", () => {
 
 	it("fills defaults", () => {
 		const config = valid();
-		eq(config.server).toEqual({ port: 3000, logLevel: "info" });
+		eq(config.server).toEqual({
+			port: 3000,
+			logLevel: "info",
+			trustProxy: [],
+			docs: false,
+		});
 		expect(config.storage.webdav.concurrency).toBe(2);
 		eq(Object.keys(config.mounts)).toEqual(["forms", "content"]);
 	});

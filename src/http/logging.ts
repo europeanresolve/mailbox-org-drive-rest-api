@@ -3,7 +3,7 @@ import type { FastifyError, FastifyInstance } from "fastify";
 import type { DestinationStream } from "pino";
 
 const UNMATCHED_ROUTE = "(unmatched)";
-const PROBLEM_JSON = "application/problem+json";
+export const PROBLEM_JSON = "application/problem+json";
 
 interface LoggedRequest {
 	method: string;
@@ -55,15 +55,21 @@ export function loggerOptions(level = "info", stream?: DestinationStream) {
 	};
 }
 
-function problem(status: number): {
+/** The one problem+json envelope. `errors` may only hold value-free entries (keyword, safe pointer). */
+export function problem(
+	status: number,
+	errors?: readonly { keyword: string; pointer?: string }[],
+): {
 	type: string;
 	title: string;
 	status: number;
+	errors?: readonly { keyword: string; pointer?: string }[];
 } {
 	return {
 		type: "about:blank",
 		title: STATUS_CODES[status] ?? "Error",
 		status,
+		...(errors === undefined ? {} : { errors }),
 	};
 }
 

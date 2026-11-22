@@ -1,0 +1,115 @@
+# Kong reference gateway config for mailbox-org-drive-rest-api (SEC-09).
+#
+# This is a REFERENCE ARTEFACT. The API works without Kong (it has its own
+# per-IP rate limit and body limits); Kong adds a second, earlier line of defence
+# and keeps request data out of the gateway's logs. The numbers below are
+# examples: tune them for your traffic.
+#
+# Tested against the pinned image kong:3.9.5 (DB-less mode) by deploy/kong-check.sh.
+#
+# Required Kong runtime settings (environment variables of the Kong container):
+#   KONG_DATABASE=off                              DB-less mode, reads this file
+#   KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml     where this file is mounted
+#   KONG_PROXY_ACCESS_LOG=off                      REQUIRED. The nginx access log
+#                                                  writes the raw request line,
+#                                                  including the query string,
+#                                                  which can carry personal data.
+#                                                  The file-log plugin below
+#                                                  replaces it.
+#   KONG_ADMIN_LISTEN=off                          no admin API unless you need it
+#   KONG_ANONYMOUS_REPORTS=off                     no usage telemetry
+#
+# Pair Kong with the API: set `server.trustProxy` in the API config to Kong's
+# address or CIDR (and nothing else), so the API believes the X-Forwarded-For
+# header Kong sets and sees real client IPs.
+#
+# The service URL assumes the API is reachable as http://api:3000 from the Kong
+# container (for example a Compose service named `api`). Change it to match.
+
+_format_version: "3.0"
+
+services:
+  - name: mailbox-org-drive-rest-api
+    url: http://api:3000
+    routes:
+      # Anonymous-capable creates (public form submissions). Stricter limits
+      # than the rest, see the route-scoped plugins below.
+      - name: collections-write
+        methods: [POST]
+        paths: [/v1]
+        strip_path: false
+
+      # Every other method on /v1 (reads, updates, deletes, and the OPTIONS
+      # preflight that browsers send before a cross-origin form POST).
+      - name: api
+        methods: [GET, HEAD, PUT, PATCH, DELETE, OPTIONS]
+        paths: [/v1]
+        strip_path: false
+
+      # Liveness and readiness probes.
+      - name: probes
+        paths: [/health, /ready]
+        strip_path: false
+
+      # OpenAPI UI. The API only serves it when server.docs is true; consider
+      # removing this route to keep it off the public internet.
+      - name: docs
+        paths: [/docs]
+        strip_path: false
+
+    plugins:
+      # Defence in depth above the API's own body limit: reject large bodies
+      # before they reach the API. 64 KB is an example.
+      - name: request-size-limiting
+        route: collections-write
+        config:
+          allowed_payload_size: 64
+          size_unit: kilobytes
+          require_content_length: false
+
+      # Strict per-client-IP limit on anonymous-capable creates (example: 10 per
+      # minute; request 11 inside the window is the first 429). A route-scoped
+      # instance replaces the global one below for this route.
+      - name: rate-limiting
+        route: collections-write
+        config:
+          minute: 10
+          limit_by: ip
+          policy: local
+          fault_tolerant: true
+          hide_client_headers: false
+
+plugins:
+  # Looser per-client-IP limit for everything else (example: 120 per minute).
+  # `policy: local` keeps counters in Kong's memory: fine for one Kong node;
+  # use `redis` or `cluster` for several.
+  - name: rate-limiting
+    config:
+      minute: 120
+      limit_by: ip
+      policy: local
+      fault_tolerant: true
+      hide_client_headers: false
+
+  # Gateway log: one JSON line per request on stdout. Kong's default serializer
+  # includes the full URL with query string, all request and response headers and
+  # the client IP, any of which can be personal data. custom_fields_by_lua sets
+  # `method`, `route` and `status`, and returns nil for the fields that carry
+  # request data, which removes them from the line. Only timing fields remain.
+  # Do not add fields here without checking they carry no request data.
+  - name: file-log
+    config:
+      path: /dev/stdout
+      reopen: false
+      custom_fields_by_lua:
+        method: "return kong.request.get_method()"
+        route: "local r = kong.router.get_route(); return r and r.name or 'unmatched'"
+        status: "return kong.response.get_status()"
+        request: "return nil"
+        response: "return nil"
+        client_ip: "return nil"
+        upstream_uri: "return nil"
+        tries: "return nil"
+        service: "return nil"
+        consumer: "return nil"
+        authenticated_entity: "return nil"

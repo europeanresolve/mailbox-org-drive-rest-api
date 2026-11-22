@@ -1,19 +1,20 @@
 ---
 gsd_state_version: "1.0"
 milestone: v1.0
-current_phase: 02
-current_phase_name: Collections, Access Policy and Anonymous Hardening
-status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-11-22T10:14:48.938Z"
-last_activity: 2026-11-21
-last_activity_desc: Phase 01 execution started
-state_head: e63bee4f722b16a66fb98156eda19ff1c578e32f
+current_phase: 1
+current_phase_name: Foundations, OX Spike and Storage Layer
+status: verifying
+stopped_at: Phase 02 complete, ready to verify Phase 1
+last_updated: "2026-11-22T11:21:15.533Z"
+last_activity: 2026-11-22
+last_activity_desc: Phase 02 complete, transitioned to Phase 1
+state_head: 24d9d1e4f58747e78c2a708db2650cae0af2b533
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 20
+  percent: 25
 ---
 
 # Project State
@@ -23,21 +24,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-21)
 
 **Core value:** Staff keep working in the Drive they already use, and developers get a safe, fast JSON API on top of it.
-**Current focus:** Phase 01 — Foundations, OX Spike and Storage Layer
+**Current focus:** Phase 02 — Collections, Access Policy and Anonymous Hardening
 
 ## Current Position
 
-Phase: 02 (Collections, Access Policy and Anonymous Hardening) — READY TO EXECUTE
-Plan: 12 of 12
-Status: Ready to execute
-Last activity: 2026-11-21 — Phase 01 execution started
+Phase: 1 — Foundations, OX Spike and Storage Layer
+Plan: 12
+Status: Phase complete — ready for verification
+Last activity: 2026-11-22 — Phase 02 complete, transitioned to Phase 1
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 8
 - Average duration: -
 - Total execution time: 0.0 hours
 
@@ -45,7 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 02 | 8 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -68,6 +69,14 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 1h | 3 tasks | 1 files |
 | Phase 01 P10 | 12min | 3 tasks | 12 files |
 | Phase 01 P12 | 10min | 2 tasks | 5 files |
+| Phase 02 P03 | 20min | 2 tasks | 5 files |
+| Phase 02 P01 | 9min | 3 tasks | 21 files |
+| Phase 02 P02 | 25min | 2 tasks | 10 files |
+| Phase 02 P04 | 8min | 2 tasks | 7 files |
+| Phase 02 P05 | 14min | 2 tasks | 15 files |
+| Phase 02 P06 | 12min | 2 tasks | 8 files |
+| Phase 02 P07 | 10min | 1 tasks | 7 files |
+| Phase 02 P08 | 25min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -98,6 +107,24 @@ Recent decisions affecting current work:
 - [Phase 01]: [01-02]: OX spike anon/ record lives outside the repo at ~/.local/state/mailbox-org-drive-rest-api/ox-spike/2026-11-21/anon; OX honours If-Match (412), unlike hacdias, and ETags must be synthesised in fixtures
 - [Phase 01]: [01-10]: OX fixtures use synthetic ETags; lastModified null on OX (C-1) and NFD-vs-NFC path folding (C-2) are left for plan 01-12 and pinned by an it.fails replay case
 - [Phase 01]: [01-12] Keep NFC fold for OX NFD names (C-2); NFD files stay unreachable via adapter, listed as OX returns them
+- [Phase 02]: Kong file-log removes request-carrying fields via custom_fields_by_lua returning nil; kong:3.9.5 pinned (02-03)
+- [Phase 02]: allowUnionTypes true in createRecordAjv so nullable fields work under strict mode
+- [Phase 02]: INVALID_PROPERTY_NAME checked at every schema depth; RESERVED_PROPERTY at root only
+- [Phase 02]: 400 pointers kept only for array indexes into real arrays or schema-declared property names
+- [Phase 02]: sibling $ref files must also resolve by realpath inside the config directory
+- [Phase 02]: 02-02: createdAt/updatedAt filter values normalised to toISOString form (calendar-checked), not compared as raw strings
+- [Phase 02]: 02-02: resolveIndexPath shared by startup checks and the list parser; cursor is strict base64url JSON {s,v,id} validated against sort and field type
+- [Phase 02]: 02-04: PATCH write is always filtered on the version it read (If-Match *, lists included); header checked against it first, 3 attempts then 409
+- [Phase 02]: 02-04: applyMergePatch defines members as own data properties and reads own members only, so __proto__ stays data
+- [Phase 02]: 02-04: malformed, weak or unquoted If-Match parses to an empty version list and gives 412, never last-write-wins
+- [Phase 02]: 02-05: the forwarded client is the nearest address not in server.trustProxy (Fastify), not the left-most, so a forged leading X-Forwarded-For entry cannot open a new rate-limit bucket
+- [Phase 02]: 02-05: origin guard and rate limiter are separate hooks; a rejected origin spends no slot and a CORS preflight never reaches the limiter
+- [Phase 02]: 02-06: 415 media-type hook runs after credentials and the rate limiter, so an unauthenticated caller gets 401, never a media-type hint
+- [Phase 02]: 02-06: UNBOUNDED_STRING walks every subschema (incl. $defs); enum/const strings count as bounded
+- [Phase 02]: 02-06: real and honeypot anonymous creates share one reply function (anonymousCreated) so status, ETag and body cannot drift
+- [Phase 02]: 02-07: Idempotency-Key is handled in the create handler after honeypot and validation, so refusals, 400s and fake 201s write no entry; record id is chosen with the pending entry so stale-lock takeover cannot duplicate
+- [Phase 02]: 02-08: OpenAPI paths and components are written from config by transformObject and swagger hides every route; /health and /ready get fixed definitions because the onRoute hook misses routes registered before the plugin loads
+- [Phase 02]: 02-08: <name>.record extends the input schema's properties and required instead of allOf, so a closed input schema stays satisfiable; error statuses listed per operation as the code can produce them
 
 ### Pending Todos
 
@@ -121,6 +148,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T08:43:46.707Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-collections-access-policy-and-anonymous-hardening/02-CONTEXT.md
+Last session: 2026-11-22T11:16:44.198Z
+Stopped at: Phase 02 complete, ready to verify Phase 1
+Resume file: None

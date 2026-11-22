@@ -1,0 +1,24 @@
+# Synthetic fixture: a valid config with one collection whose schema is a sibling file.
+storage:
+  webdav:
+    url: https://dav.example.invalid/
+    username: user@example.invalid
+    password: ${WEBDAV_APP_PASSWORD}
+mongo:
+  uri: mongodb://127.0.0.1:27017/example
+mounts:
+  forms:
+    path: /Userstore/Example Service/Forms
+    mode: read-write
+collections:
+  contact:
+    schema:
+      $ref: contact.schema.json
+    operations:
+      create: anonymous
+      get: apiKey
+apiKeys:
+  - name: backend
+    hash: "0000000000000000000000000000000000000000000000000000000000000000"
+    grants:
+      - contact:get

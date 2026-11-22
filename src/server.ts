@@ -1,11 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import pino, { type DestinationStream } from "pino";
 import { buildApp } from "./app.ts";
+import { ensureIndexes, scheduleIndexSetup } from "./collections/indexes.ts";
 import { ConfigError, loadConfig } from "./config/load.ts";
 import { createMongo } from "./db/mongo.ts";
 import { createDriveHealth } from "./storage/drive-health.ts";
 import { buildMounts } from "./storage/mounts.ts";
 import { WebDavAdapter } from "./storage/webdav-adapter.ts";
+
+const INDEX_RETRY_MS = 30_000;
 
 export type AdapterTimings = {
 	retries?: number;
@@ -36,6 +39,7 @@ export async function start(
 		// Config requires at least one mount, so this is unreachable too.
 		if (firstMount === undefined) throw new ConfigError([]);
 
+		const db = mongo.client.db();
 		// The closure lets the app be built before driveHealth exists.
 		let driveHealth: ReturnType<typeof createDriveHealth> | undefined;
 		const app = buildApp({
@@ -47,6 +51,9 @@ export async function start(
 				mongoPing: mongo.ping,
 				driveState: () => driveHealth?.state() ?? "unknown",
 			},
+			collections: { config, db },
+			trustProxy: config.server.trustProxy,
+			docs: config.server.docs,
 		});
 		driveHealth = createDriveHealth({
 			probe: () => adapter.stat(mounts.get(firstMount).root),
@@ -63,12 +70,21 @@ export async function start(
 					name,
 					mode,
 				})),
+				// Names only: schemas and keys never reach a log.
+				collections: Object.keys(config.collections),
 			},
 			"configuration loaded",
 		);
+		// Not awaited: /health and /ready never depend on it, and an outage at boot only delays it.
+		const indexSetup = scheduleIndexSetup({
+			ensure: () => ensureIndexes(db, config),
+			log: { warn: (fields, message) => app.log.warn(fields, message) },
+			retryMs: INDEX_RETRY_MS,
+		});
 		return {
 			app,
 			close: async () => {
+				indexSetup.stop();
 				await app.close();
 				await mongo.close();
 			},
