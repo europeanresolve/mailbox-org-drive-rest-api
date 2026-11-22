@@ -223,6 +223,48 @@ function walk(
 	}
 }
 
+/** True when a string stays bounded without maxLength: only enum or const values can occur. */
+function boundedByValue(node: Record<string, unknown>): boolean {
+	return Array.isArray(node.enum) || Object.hasOwn(node, "const");
+}
+
+function allowsString(node: Record<string, unknown>): boolean {
+	const { type } = node;
+	return type === "string" || (Array.isArray(type) && type.includes("string"));
+}
+
+/**
+ * Every string subschema without a maxLength (SEC-03). An anonymous submitter
+ * controls these values, so each one needs an upper bound; the body limit alone
+ * would still allow one huge string per request.
+ */
+function unboundedStrings(
+	node: unknown,
+	at: string,
+	report: (issue: ConfigIssue) => void,
+): void {
+	if (!isRecord(node)) return;
+	if (
+		allowsString(node) &&
+		typeof node.maxLength !== "number" &&
+		!boundedByValue(node)
+	) {
+		report({ code: "collection.UNBOUNDED_STRING", at });
+	}
+	for (const [child, childAt] of subschemas(node, at)) {
+		unboundedStrings(child, childAt, report);
+	}
+}
+
+const ANONYMOUS_WRITES = ["create", "replace", "patch"] as const;
+
+function writesAnonymously(operations: unknown): boolean {
+	return (
+		isRecord(operations) &&
+		ANONYMOUS_WRITES.some((op) => operations[op] === "anonymous")
+	);
+}
+
 // --- indexed paths -----------------------------------------------------------
 
 export type ScalarType = "string" | "number" | "integer" | "boolean";
@@ -382,6 +424,9 @@ export function collectionIssues(
 			continue;
 		}
 		walk(schema, schemaAt, true, report);
+		if (writesAnonymously(entry.operations)) {
+			unboundedStrings(schema, schemaAt, report);
+		}
 		indexIssues(entry.indexes, schema, base, report);
 	}
 	return issues;

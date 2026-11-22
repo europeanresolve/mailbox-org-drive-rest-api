@@ -1,6 +1,6 @@
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Db } from "mongodb";
 import {
 	ConfigKeyStore,
@@ -9,7 +9,11 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
-import { anonymousRateLimit, originGuard } from "./hardening.ts";
+import {
+	anonymousRateLimit,
+	originGuard,
+	requireMediaType,
+} from "./hardening.ts";
 import { parseIfMatch } from "./if-match.ts";
 import {
 	encodeCursor,
@@ -44,6 +48,7 @@ function reject(
 	return reply.status(status).type(PROBLEM_JSON).send(problem(status, errors));
 }
 
+const JSON_TYPE = "application/json";
 const MERGE_PATCH = "application/merge-patch+json";
 /** Total attempts for a PATCH that keeps losing the version race (D-20). */
 const PATCH_ATTEMPTS = 3;
@@ -59,12 +64,6 @@ const OPERATION_METHOD = {
 } as const;
 
 const etag = (version: number): string => `"${version}"`;
-
-/** The media type without parameters, lower-cased; "" when the header is absent. */
-function mediaType(request: FastifyRequest): string {
-	const [type = ""] = (request.headers["content-type"] ?? "").split(";");
-	return type.trim().toLowerCase();
-}
 
 /**
  * One encapsulated plugin per collection at /v1/{name} (D-15). An operation with
@@ -117,25 +116,42 @@ export function registerCollections(
 					policy === "apiKey"
 						? { onRequest: requireGrant(keyStore, name, operation) }
 						: { onRequest: limited };
+				// Body routes: credentials or limiter first, then the media type, all before
+				// the body is read; Fastify answers 413 itself above bodyLimit.
+				const bodyRoute = (
+					operation: string,
+					policy: string,
+					type: string,
+				) => ({
+					onRequest: [
+						guard(operation, policy).onRequest,
+						requireMediaType(type),
+					],
+					bodyLimit: definition.bodyLimit,
+				});
 
 				if (operations.create !== undefined) {
 					const policy = operations.create;
-					scope.post("/", guard("create", policy), async (request, reply) => {
-						const body = request.body;
-						// Record bodies are validated here, not through route `schema.body`:
-						// Fastify's Ajv would coerce and strip them.
-						const errors = isPlainObject(body)
-							? validate(body)
-							: [{ keyword: "type" }];
-						if (errors !== null || !isPlainObject(body)) {
-							return reject(reply, 400, errors ?? []);
-						}
-						const created = await store.insert(name, body);
-						reply.status(201).header("etag", etag(created._v));
-						return policy === "anonymous"
-							? { id: created._id, createdAt: created.createdAt }
-							: toRecord(created);
-					});
+					scope.post(
+						"/",
+						bodyRoute("create", policy, JSON_TYPE),
+						async (request, reply) => {
+							const body = request.body;
+							// Record bodies are validated here, not through route `schema.body`:
+							// Fastify's Ajv would coerce and strip them.
+							const errors = isPlainObject(body)
+								? validate(body)
+								: [{ keyword: "type" }];
+							if (errors !== null || !isPlainObject(body)) {
+								return reject(reply, 400, errors ?? []);
+							}
+							const created = await store.insert(name, body);
+							reply.status(201).header("etag", etag(created._v));
+							return policy === "anonymous"
+								? { id: created._id, createdAt: created.createdAt }
+								: toRecord(created);
+						},
+					);
 				}
 
 				if (operations.list !== undefined) {
@@ -186,11 +202,8 @@ export function registerCollections(
 				if (operations.replace !== undefined) {
 					scope.put<{ Params: { id: string } }>(
 						"/:id",
-						guard("replace", operations.replace),
+						bodyRoute("replace", operations.replace, JSON_TYPE),
 						async (request, reply) => {
-							if (mediaType(request) !== "application/json") {
-								return reject(reply, 415);
-							}
 							const body = request.body;
 							const errors = isPlainObject(body)
 								? validate(body)
@@ -229,11 +242,8 @@ export function registerCollections(
 					);
 					scope.patch<{ Params: { id: string } }>(
 						"/:id",
-						guard("patch", operations.patch),
+						bodyRoute("patch", operations.patch, MERGE_PATCH),
 						async (request, reply) => {
-							if (mediaType(request) !== MERGE_PATCH) {
-								return reject(reply, 415);
-							}
 							const patch = request.body;
 							if (!isPlainObject(patch)) {
 								return reject(reply, 400, [{ keyword: "type" }]);

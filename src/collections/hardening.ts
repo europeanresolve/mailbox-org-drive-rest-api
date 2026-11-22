@@ -31,3 +31,29 @@ export function anonymousRateLimit(
 ) {
 	return app.rateLimit({ max, timeWindow: windowSeconds * 1000 });
 }
+
+/**
+ * onRequest hook that admits only `type` (SEC-03). It runs before Fastify reads the
+ * body, so a wrong or missing Content-Type is refused with 415 without parsing.
+ * Type and subtype compare case-insensitively; `charset` must be utf-8 when present
+ * and every other parameter is ignored. The reply is fixed text: the header value
+ * is never echoed.
+ */
+export function requireMediaType(type: string) {
+	return async (request: FastifyRequest, reply: FastifyReply) => {
+		const [media = "", ...parameters] = (
+			request.headers["content-type"] ?? ""
+		).split(";");
+		const charsetOk = parameters.every((parameter) => {
+			const [name = "", ...rest] = parameter.split("=");
+			if (name.trim().toLowerCase() !== "charset") return true;
+			const value = rest
+				.join("=")
+				.trim()
+				.replace(/^"(.*)"$/, "$1");
+			return value.toLowerCase() === "utf-8";
+		});
+		if (media.trim().toLowerCase() === type && charsetOk) return;
+		return reply.status(415).type(PROBLEM_JSON).send(problem(415));
+	};
+}

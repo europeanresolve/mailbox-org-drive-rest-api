@@ -17,7 +17,7 @@ const SCHEMA = {
 	properties: {
 		status: { type: "string", maxLength: 10 },
 		nickname: { type: "string", maxLength: 10 },
-		maybe: { type: ["string", "null"] },
+		maybe: { type: ["string", "null"], maxLength: 10 },
 		priority: { type: "integer" },
 		sort: { type: "string", maxLength: 10 },
 		gte: { type: "string", maxLength: 10 },
@@ -26,7 +26,7 @@ const SCHEMA = {
 			items: {
 				type: "object",
 				additionalProperties: false,
-				properties: { name: { type: "string" } },
+				properties: { name: { type: "string", maxLength: 10 } },
 			},
 		},
 		address: {
