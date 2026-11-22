@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 02
 current_phase_name: Collections, Access Policy and Anonymous Hardening
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-11-22T10:36:47.991Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-11-22T10:45:41.636Z"
 last_activity: 2026-11-22
 last_activity_desc: Phase 02 execution started
-state_head: 75df61cae9dc7431bc2eeb8c31ccff0c21cae759
+state_head: a0f17529fc8abedd7447ff6a97aa249157aade28
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 02 (Collections, Access Policy and Anonymous Hardening) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready to execute
 Last activity: 2026-11-22 — Phase 02 execution started
 
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P03 | 20min | 2 tasks | 5 files |
 | Phase 02 P01 | 9min | 3 tasks | 21 files |
 | Phase 02 P02 | 25min | 2 tasks | 10 files |
+| Phase 02 P04 | 8min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,9 @@ Recent decisions affecting current work:
 - [Phase 02]: sibling $ref files must also resolve by realpath inside the config directory
 - [Phase 02]: 02-02: createdAt/updatedAt filter values normalised to toISOString form (calendar-checked), not compared as raw strings
 - [Phase 02]: 02-02: resolveIndexPath shared by startup checks and the list parser; cursor is strict base64url JSON {s,v,id} validated against sort and field type
+- [Phase 02]: 02-04: PATCH write is always filtered on the version it read (If-Match *, lists included); header checked against it first, 3 attempts then 409
+- [Phase 02]: 02-04: applyMergePatch defines members as own data properties and reads own members only, so __proto__ stays data
+- [Phase 02]: 02-04: malformed, weak or unquoted If-Match parses to an empty version list and gives 412, never last-write-wins
 
 ### Pending Todos
 
@@ -131,6 +135,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-22T10:36:47.946Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-11-22T10:45:41.614Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

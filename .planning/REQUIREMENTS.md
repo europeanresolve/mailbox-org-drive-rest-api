@@ -36,8 +36,8 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **COLL-02**: API consumer can create a record; it is validated by a strict validator (no type coercion, no silent stripping, `additionalProperties:false`) and gets a server-generated UUID, `createdAt` and `updatedAt`
 - [x] **COLL-03**: API consumer can list records with cursor pagination and equality/range filters on indexed fields only
 - [x] **COLL-04**: API consumer can get a single record by ID
-- [ ] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
-- [ ] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
+- [x] **COLL-05**: API consumer can replace a record (PUT) and patch it (RFC 7396 merge-patch, validated after merge)
+- [x] **COLL-06**: API consumer can delete a record (hard vs soft delete decided in discuss-phase)
 - [x] **COLL-07**: API consumer receives errors as `application/problem+json` without echoing submitted values
 - [x] **COLL-08**: Anonymous create responds with only `id` and `createdAt`
 
@@ -153,8 +153,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | COLL-02 | Phase 2 | Complete |
 | COLL-03 | Phase 2 | Complete |
 | COLL-04 | Phase 2 | Complete |
-| COLL-05 | Phase 2 | Pending |
-| COLL-06 | Phase 2 | Pending |
+| COLL-05 | Phase 2 | Complete |
+| COLL-06 | Phase 2 | Complete |
 | COLL-07 | Phase 2 | Complete |
 | COLL-08 | Phase 2 | Complete |
 | SEC-01 | Phase 2 | Complete |
