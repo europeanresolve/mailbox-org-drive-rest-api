@@ -21,6 +21,8 @@ export function createRecordAjv(): Ajv2020 {
 		coerceTypes: false,
 		removeAdditional: false,
 		useDefaults: false,
+		// Nullable fields (type: [string, null]) are common and do not weaken validation.
+		allowUnionTypes: true,
 	});
 	// ajv-formats is CommonJS; under NodeNext the import is the module object
 	// and the plugin is its `default` (also set at runtime).

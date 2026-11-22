@@ -15,7 +15,8 @@
 		"stack:down": "docker compose down -v",
 		"lint": "biome ci .",
 		"typecheck": "tsc --noEmit",
-		"build": "tsc -p tsconfig.build.json"
+		"build": "tsc -p tsconfig.build.json",
+		"keygen": "node src/keygen.ts"
 	},
 	"dependencies": {
 		"ajv": "8.20.0",

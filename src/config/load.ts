@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { type Document, isNode, parseDocument } from "yaml";
+import {
+	apiKeyIssues,
+	collectionIssues,
+	resolveSchemaRefs,
+} from "../collections/definition.ts";
 import {
 	buildMounts,
 	type MountDef,
@@ -338,12 +344,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	const envIssues = collector();
 	const failed = new Set<string>();
 	const resolved = interpolate(doc.toJS() ?? {}, "", env, failed, envIssues);
-	const document = applyEnvOverrides(resolved, env, envIssues);
+	const overridden = applyEnvOverrides(resolved, env, envIssues);
 
-	const semantic: ConfigIssue[] = [];
+	// Sibling-file schemas are read before the schema stage; ones that fail are not checked twice.
+	const refs = resolveSchemaRefs(overridden, dirname(resolve(path)));
+	const document = refs.document;
+	for (const at of refs.failed) failed.add(at);
+
+	const semantic: ConfigIssue[] = [...refs.issues];
 	const urlIssue = webdavUrlIssue(document, failed);
 	if (urlIssue !== undefined) semantic.push(urlIssue);
 	semantic.push(...mountIssues(document, failed));
+	semantic.push(...collectionIssues(document, failed));
+	semantic.push(...apiKeyIssues(document, failed));
 
 	const issues = [
 		...envIssues.issues,
