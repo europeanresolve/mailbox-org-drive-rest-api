@@ -1,0 +1,108 @@
+# Synthetic fixture: every collection and key mistake at once; each must surface in one failure.
+# Sibling files used: broken.schema.yaml (not a schema object). Missing on purpose: nope.schema.json.
+storage:
+  webdav:
+    url: https://dav.example.invalid/
+    username: user@example.invalid
+    password: ${WEBDAV_APP_PASSWORD}
+mongo:
+  uri: mongodb://127.0.0.1:27017/example
+mounts:
+  forms:
+    path: /Userstore/Example Service/Forms
+    mode: read-write
+collections:
+  files:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string }
+    operations:
+      create: anonymous
+  Bad_Name:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string }
+    operations:
+      create: anonymous
+  contact:
+    schema:
+      type: object
+      description: canary-7f3a
+      properties:
+        id: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+        a.b: { type: string }
+        $x: { type: string }
+        _y: { type: string }
+        address:
+          type: object
+          properties:
+            street: { type: string }
+    operations:
+      create: anonymous
+      publish: anonymous
+      get: oidc
+  broken-type:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: strng }
+    operations:
+      create: anonymous
+  unknown-keyword:
+    schema:
+      type: object
+      additionalProperties: false
+      x-foo: true
+      properties:
+        title: { type: string }
+    operations:
+      create: anonymous
+  not-object:
+    schema:
+      type: array
+      items: { type: string }
+    operations:
+      create: anonymous
+  ref-up:
+    schema:
+      $ref: ../x.json
+    operations:
+      create: anonymous
+  ref-absolute:
+    schema:
+      $ref: /etc/hosts
+    operations:
+      create: anonymous
+  ref-missing:
+    schema:
+      $ref: nope.schema.json
+    operations:
+      create: anonymous
+  ref-broken:
+    schema:
+      $ref: broken.schema.yaml
+    operations:
+      create: anonymous
+apiKeys:
+  - name: dup
+    hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    grants:
+      - ghost:get
+      - contact:publish
+      - nocolon
+      - contact:*
+  - name: dup
+    hash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    grants:
+      - contact:get
+  - name: bad-hash
+    hash: canary-7f3a-not-a-hash
+    grants:
+      - contact:get

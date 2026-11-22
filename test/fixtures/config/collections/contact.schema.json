@@ -1,0 +1,15 @@
+{
+	"type": "object",
+	"additionalProperties": false,
+	"required": ["email", "name"],
+	"properties": {
+		"email": { "type": "string", "format": "email", "maxLength": 254 },
+		"name": { "type": "string", "maxLength": 100 },
+		"note": { "type": ["string", "null"], "maxLength": 500 },
+		"address": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": { "street": { "type": "string", "maxLength": 100 } }
+		}
+	}
+}
