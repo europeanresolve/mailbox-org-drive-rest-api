@@ -6,6 +6,7 @@ import { StorageError } from "../storage/errors.ts";
 import type { WritableMount } from "../storage/mount-view.ts";
 import { MirrorLease } from "./lease.ts";
 import { mirrorFilePath, mirrorFolders } from "./path.ts";
+import { isDue } from "./schedule.ts";
 import type { MirrorStateStore } from "./state.ts";
 import type { MirrorTimings } from "./timings.ts";
 import { buildWorkbook } from "./workbook.ts";
@@ -71,9 +72,7 @@ export class MirrorWorker {
 		const names = Object.keys(this.#config.collections);
 		const now = Date.now();
 		const states = await this.#state.list(names);
-		const due = states.filter(
-			(s) => s.dirtySeq > s.mirroredSeq && s.dueAt.getTime() <= now,
-		);
+		const due = states.filter((s) => isDue(s, now, this.#timings));
 		for (const state of due) {
 			await this.#mirrorOne(state._id);
 		}
@@ -104,6 +103,7 @@ export class MirrorWorker {
 			if (current === null) return;
 			const seq = current.dirtySeq;
 
+			const passReadAt = new Date();
 			const records = await this.#store.allSorted(name);
 			const collection = this.#config.collections[name];
 			if (collection === undefined) return;
@@ -161,7 +161,10 @@ export class MirrorWorker {
 			if (!leaseLive) return;
 
 			if (skip) {
-				const committed = await this.#state.commit(name, token, { seq });
+				const committed = await this.#state.commit(name, token, {
+					seq,
+					passReadAt,
+				});
 				if (!committed) {
 					this.#log.warn({ collection: name, token }, "mirror commit fenced");
 				} else {
@@ -177,6 +180,7 @@ export class MirrorWorker {
 
 			const committed = await this.#state.commit(name, token, {
 				seq,
+				passReadAt,
 				contentHash,
 				lastWrittenEtag: etag,
 				...(external

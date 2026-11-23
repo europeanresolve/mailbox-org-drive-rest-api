@@ -45,6 +45,7 @@ async function waitSettled(db: Db, name: string): Promise<void> {
 		async () => {
 			const s = await db
 				.collection<{
+					_id: string;
 					dirtySeq?: number;
 					mirroredSeq?: number;
 				}>("mirror_state")
@@ -177,7 +178,7 @@ describe("mirror debounce and max wait", () => {
 			await waitUntil(
 				async () => {
 					const s = await app.db
-						.collection<{ pendingSince?: Date }>("mirror_state")
+						.collection<{ _id: string; pendingSince?: Date }>("mirror_state")
 						.findOne({ _id: "contact" });
 					return s?.pendingSince instanceof Date;
 				},
@@ -187,7 +188,7 @@ describe("mirror debounce and max wait", () => {
 
 			await waitSettled(app.db, "contact");
 			const after = await app.db
-				.collection<{ pendingSince?: Date }>("mirror_state")
+				.collection<{ _id: string; pendingSince?: Date }>("mirror_state")
 				.findOne({ _id: "contact" });
 			expect(after?.pendingSince).toBeUndefined();
 		} finally {

@@ -43,12 +43,14 @@ export class MirrorStateStore {
 	}
 
 	async markDirty(name: string): Promise<void> {
+		const now = new Date();
 		const dueAt = new Date(Date.now() + this.#debounceMs);
 		await this.#collection.updateOne(
 			{ _id: name },
 			{
 				$inc: { dirtySeq: 1 },
 				$max: { dueAt },
+				$min: { pendingSince: now },
 				$setOnInsert: { mirroredSeq: 0 },
 			},
 			{ upsert: true },
@@ -77,14 +79,24 @@ export class MirrorStateStore {
 		token: number,
 		fields: {
 			seq: number;
+			passReadAt?: Date;
 			contentHash?: string;
 			lastWrittenEtag?: string | null;
 			lastMirroredAt?: Date;
 			externalChangeAt?: Date;
 			incExternalChanges?: boolean;
+			clearReconcile?: boolean;
 		},
 	): Promise<boolean> {
-		const set: Record<string, unknown> = { mirroredSeq: fields.seq };
+		const doc = await this.#collection.findOne({ _id: name, fence: token });
+		if (doc === null) return false;
+
+		const set: Record<string, unknown> = {
+			mirroredSeq: fields.seq,
+			reconcileRequested: false,
+			failures: 0,
+			lastError: null,
+		};
 		if (fields.contentHash !== undefined) set.contentHash = fields.contentHash;
 		if (fields.lastWrittenEtag !== undefined) {
 			set.lastWrittenEtag = fields.lastWrittenEtag;
@@ -97,7 +109,14 @@ export class MirrorStateStore {
 		if (fields.externalChangeAt !== undefined) {
 			set.externalChangeAt = fields.externalChangeAt;
 		}
-		const update: Record<string, unknown> = { $set: set };
+		const unset: Record<string, unknown> = { nextAttemptAt: "" };
+		if (doc.dirtySeq === fields.seq) {
+			unset.pendingSince = "";
+		} else if (fields.passReadAt !== undefined) {
+			set.pendingSince = fields.passReadAt;
+		}
+
+		const update: Record<string, unknown> = { $set: set, $unset: unset };
 		if (fields.incExternalChanges === true) {
 			update.$inc = { externalChanges: 1 };
 		}
