@@ -1,6 +1,20 @@
 import type { Db } from "mongodb";
 import type { MirrorTimings } from "./timings.ts";
 
+export type MirrorErrorCode =
+	| "not-found"
+	| "conflict"
+	| "forbidden"
+	| "unauthorized"
+	| "rate-limited"
+	| "unavailable"
+	| "too-large"
+	| "insufficient-storage"
+	| "read-only-mount"
+	| "invalid-path"
+	| "workbook"
+	| "internal";
+
 export type MirrorState = {
 	_id: string;
 	dirtySeq: number;
@@ -12,6 +26,11 @@ export type MirrorState = {
 	lastWrittenEtag?: string | null;
 	externalChangeAt?: Date;
 	externalChanges?: number;
+	pendingSince?: Date;
+	reconcileRequested?: boolean;
+	failures?: number;
+	nextAttemptAt?: Date;
+	lastError?: MirrorErrorCode | null;
 };
 
 export class MirrorStateStore {

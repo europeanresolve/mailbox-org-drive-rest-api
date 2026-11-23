@@ -6,10 +6,14 @@ export type MirrorTimings = {
 	maxWaitMs: number;
 	reconcileMs: number;
 	leaseTtlMs: number;
+	backoffBaseMs: number;
+	backoffMaxMs: number;
 };
 
 const DEFAULT_POLL_MS = 1000;
 const DEFAULT_LEASE_TTL_MS = 60_000;
+const DEFAULT_BACKOFF_BASE_MS = 30_000;
+const DEFAULT_BACKOFF_MAX_MS = 900_000;
 
 export function resolveTimings(
 	mirror: NonNullable<Config["mirror"]>,
@@ -24,5 +28,7 @@ export function resolveTimings(
 		maxWaitMs: overrides.maxWaitMs ?? maxWaitMs,
 		reconcileMs: overrides.reconcileMs ?? reconcileMs,
 		leaseTtlMs: overrides.leaseTtlMs ?? DEFAULT_LEASE_TTL_MS,
+		backoffBaseMs: overrides.backoffBaseMs ?? DEFAULT_BACKOFF_BASE_MS,
+		backoffMaxMs: overrides.backoffMaxMs ?? DEFAULT_BACKOFF_MAX_MS,
 	};
 }
