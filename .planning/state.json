@@ -16,7 +16,7 @@
     {
       "number": "3",
       "name": "Mirror Worker",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "number": "4",
@@ -29,5 +29,5 @@
     "label": "Advance to the next step",
     "reason": "Phase 3 of 4 · executing"
   },
-  "updated_at": "2026-11-22T21:20:11.907Z"
+  "updated_at": "2026-11-23T05:15:16.508Z"
 }

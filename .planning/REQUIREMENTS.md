@@ -13,7 +13,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **FND-02**: Operator can call `/health` (process alive) and `/ready` (MongoDB reachable; Drive outage reported but does not fail readiness)
 - [x] **FND-03**: Operator gets structured pino logs that contain no personal data (route templates not raw URLs, no bodies, no Mongo/Ajv error values), enforced by a CI canary-string test across error paths
 - [x] **FND-04**: API consumer can read an OpenAPI 3.1 document and UI at `/docs`, including per-collection schemas generated from config
-- [ ] **FND-05**: Deployer can run the service as a single container image with roles `api`, `worker` or `all`, needing only MongoDB (no Kong or Keycloak)
+- [x] **FND-05**: Deployer can run the service as a single container image with roles `api`, `worker` or `all`, needing only MongoDB (no Kong or Keycloak)
 
 ### Developer Experience
 
@@ -54,10 +54,10 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 ### Spreadsheet Mirror
 
-- [ ] **MIRR-01**: Staff see each collection mirrored to its own `.xlsx` in Drive, regenerated (debounced) after record changes
+- [x] **MIRR-01**: Staff see each collection mirrored to its own `.xlsx` in Drive, regenerated (debounced) after record changes
 - [ ] **MIRR-02**: Only one writer updates a mirror at a time, even with several replicas (Mongo lease with fencing), verified by a two-instance test
-- [ ] **MIRR-03**: Mirror writes use a direct PUT over the final file, per the spike (P-17); no temp files are created
-- [ ] **MIRR-04**: Mirror columns follow the schema, in a stable order
+- [x] **MIRR-03**: Mirror writes use a direct PUT over the final file, per the spike (P-17); no temp files are created
+- [x] **MIRR-04**: Mirror columns follow the schema, in a stable order
 - [ ] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
 - [ ] **MIRR-06**: The mirror is not re-uploaded when its content has not changed (deterministic workbook plus content hash)
 - [ ] **MIRR-07**: A missed mirror update (crash between write and mirror) is recovered automatically by a reconciler on boot and periodically
@@ -139,7 +139,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FND-02 | Phase 1 | Complete |
 | FND-03 | Phase 1 | Complete |
 | FND-04 | Phase 2 | Complete |
-| FND-05 | Phase 3 | Pending |
+| FND-05 | Phase 3 | Complete |
 | DEV-01 | Phase 1 | Complete |
 | DEV-02 | Phase 1 | Complete |
 | DEV-03 | Phase 1 | Complete |
@@ -166,10 +166,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-07 | Phase 2 | Dropped |
 | SEC-08 | Phase 2 | Complete |
 | SEC-09 | Phase 2 | Complete |
-| MIRR-01 | Phase 3 | Pending |
+| MIRR-01 | Phase 3 | Complete |
 | MIRR-02 | Phase 3 | Pending |
-| MIRR-03 | Phase 3 | Pending |
-| MIRR-04 | Phase 3 | Pending |
+| MIRR-03 | Phase 3 | Complete |
+| MIRR-04 | Phase 3 | Complete |
 | MIRR-05 | Phase 3 | Pending |
 | MIRR-06 | Phase 3 | Pending |
 | MIRR-07 | Phase 3 | Pending |
