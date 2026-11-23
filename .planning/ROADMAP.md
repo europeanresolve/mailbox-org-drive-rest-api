@@ -80,12 +80,12 @@ Plans (listed in wave order):
   3. With two instances running, a two-instance integration test shows only one writes the mirror at a time; each write is a direct PUT over the final file per the spike, with no temp files; and an unchanged collection is not re-uploaded
   4. After a crash between a record write and its mirror update, the mirror catches up automatically through the boot-time and periodic reconciler, with no manual step
   5. Operator with an API key can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB, and Deployer can run the single container image as role `api`, `worker` or `all` needing only MongoDB (no Kong or Keycloak)
-**Plans:** 2/8 plans executed
+**Plans:** 5/8 plans executed
 
 Plans (listed in wave order):
 - [x] 03-01-PLAN.md — Tracer: exceljs, mirror config, dirty mark, direct PUT mirror for one collection, ROLE (wave 1)
 - [x] 03-02-PLAN.md — Main sheet columns, formula/XML guards, dates, content hash (wave 2)
-- [ ] 03-04-PLAN.md — Mongo lease, fencing, hash skip, external-change overwrite, two-instance test (wave 2)
+- [x] 03-04-PLAN.md — Mongo lease, fencing, hash skip, external-change overwrite, two-instance test (wave 2)
 - [x] 03-06-PLAN.md — Nested collection names, routes, grants, mirror folders, unsafe property check (wave 2) — 2026-11-23
 - [x] 03-03-PLAN.md — Array sheets, TEXTJOIN/COUNTIF summary formulas, sheet naming (wave 3)
 - [ ] 03-05-PLAN.md — Debounce, max wait, boot and periodic reconciliation (wave 3)

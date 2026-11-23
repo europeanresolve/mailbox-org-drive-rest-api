@@ -55,7 +55,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 ### Spreadsheet Mirror
 
 - [x] **MIRR-01**: Staff see each collection mirrored to its own `.xlsx` in Drive, regenerated (debounced) after record changes
-- [ ] **MIRR-02**: Only one writer updates a mirror at a time, even with several replicas (Mongo lease with fencing), verified by a two-instance test
+- [x] **MIRR-02**: Only one writer updates a mirror at a time, even with several replicas (Mongo lease with fencing), verified by a two-instance test
 - [x] **MIRR-03**: Mirror writes use a direct PUT over the final file, per the spike (P-17); no temp files are created
 - [x] **MIRR-04**: Mirror columns follow the schema, in a stable order
 - [x] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
@@ -167,7 +167,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-08 | Phase 2 | Complete |
 | SEC-09 | Phase 2 | Complete |
 | MIRR-01 | Phase 3 | Complete |
-| MIRR-02 | Phase 3 | Pending |
+| MIRR-02 | Phase 3 | Complete |
 | MIRR-03 | Phase 3 | Complete |
 | MIRR-04 | Phase 3 | Complete |
 | MIRR-05 | Phase 3 | Complete |
