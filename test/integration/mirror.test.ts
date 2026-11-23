@@ -51,8 +51,17 @@ describe("tracer: record write to mirror xlsx through start()", () => {
 			expect(state?.dirtySeq).toBe(1);
 
 			const folder = app.mirrorFolder;
+			const body = (await res.json()) as {
+				id: string;
+				createdAt: string;
+			};
 			await waitUntil(
-				async () => (await fetchMirror(folder, "contact.xlsx")) !== null,
+				async () => {
+					const file = await fetchMirror(folder, "contact.xlsx");
+					if (file === null) return false;
+					const parsed = await readRows(file);
+					return parsed.rows[1]?.[0] === body.id;
+				},
 				5000,
 				50,
 			);
@@ -72,10 +81,6 @@ describe("tracer: record write to mirror xlsx through start()", () => {
 				"createdAt",
 				"updatedAt",
 			]);
-			const body = (await res.json()) as {
-				id: string;
-				createdAt: string;
-			};
 			expect(rows[1]?.[0]).toBe(body.id);
 			expect(rows[1]?.[1]).toBe("a@example.invalid");
 			expect(rows[1]?.[2]).toBe("A");

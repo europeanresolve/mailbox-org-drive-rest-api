@@ -32,7 +32,7 @@ const mirrorTimings = { pollMs: 50, debounceMs: 100, leaseTtlMs: 5_000 };
 
 async function bumpDirty(db: Db): Promise<void> {
 	await db
-		.collection("mirror_state")
+		.collection<{ _id: string }>("mirror_state")
 		.updateOne(
 			{ _id: "contact" },
 			{ $inc: { dirtySeq: 1 }, $set: { dueAt: new Date(0) } },
@@ -43,7 +43,11 @@ async function waitMirrored(db: Db, minDirty: number): Promise<void> {
 	await waitUntil(
 		async () => {
 			const s = await db
-				.collection<{ dirtySeq?: number; mirroredSeq?: number }>("mirror_state")
+				.collection<{
+					_id: string;
+					dirtySeq?: number;
+					mirroredSeq?: number;
+				}>("mirror_state")
 				.findOne({ _id: "contact" });
 			return (
 				s?.mirroredSeq !== undefined &&
@@ -92,7 +96,7 @@ describe("mirror content-hash skip and external overwrite", () => {
 			const etag1 = await mirrorEtag(folder, "contact.xlsx");
 			expect(etag1).toBeTruthy();
 			const before = await app.db
-				.collection<{ lastMirroredAt?: Date }>("mirror_state")
+				.collection<{ _id: string; lastMirroredAt?: Date }>("mirror_state")
 				.findOne({ _id: "contact" });
 
 			await bumpDirty(app.db);
@@ -104,7 +108,7 @@ describe("mirror content-hash skip and external overwrite", () => {
 			);
 
 			const after = await app.db
-				.collection<{ lastMirroredAt?: Date }>("mirror_state")
+				.collection<{ _id: string; lastMirroredAt?: Date }>("mirror_state")
 				.findOne({ _id: "contact" });
 			expect(after?.lastMirroredAt?.getTime() ?? 0).toBeGreaterThan(
 				before?.lastMirroredAt?.getTime() ?? 0,
@@ -146,6 +150,7 @@ describe("mirror content-hash skip and external overwrite", () => {
 
 			const state = await app.db
 				.collection<{
+					_id: string;
 					externalChangeAt?: Date;
 					externalChanges?: number;
 				}>("mirror_state")
@@ -225,7 +230,7 @@ describe("mirror content-hash skip and external overwrite", () => {
 			expect(rows[1]?.[1]).toBe("pre@example.invalid");
 
 			const state = await app.db
-				.collection<{ externalChangeAt?: Date }>("mirror_state")
+				.collection<{ _id: string; externalChangeAt?: Date }>("mirror_state")
 				.findOne({ _id: "contact" });
 			expect(state?.externalChangeAt).toBeInstanceOf(Date);
 			expect(await listMirror(folder)).toEqual(["contact.xlsx"]);

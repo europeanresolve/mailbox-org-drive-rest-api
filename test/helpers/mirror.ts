@@ -43,8 +43,12 @@ export async function mirrorEtag(
 		throw new Error(`mirror PROPFIND failed with status ${res.status}`);
 	}
 	const text = await res.text();
-	const match = text.match(/<getetag>([^<]*)<\/getetag>/);
-	return match?.[1] ?? null;
+	const match = text.match(
+		/<(?:[A-Za-z]+:)?getetag>([^<]*)<\/(?:[A-Za-z]+:)?getetag>/,
+	);
+	const raw = match?.[1]?.trim();
+	if (raw === undefined || raw.length === 0) return null;
+	return raw.replace(/^"|"$/g, "");
 }
 
 export async function listMirror(folder: string, rel = ""): Promise<string[]> {
