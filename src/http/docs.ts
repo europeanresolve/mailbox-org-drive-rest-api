@@ -422,6 +422,107 @@ const READY_BODY: Json = {
 	},
 };
 
+const MIRROR_STATUS_FIELDS: Json = {
+	name: { type: "string" },
+	lastMirroredAt: {
+		type: ["string", "null"],
+		format: "date-time",
+	},
+	lagSeconds: { type: "integer" },
+	pendingWrites: { type: "integer" },
+	failures: { type: "integer" },
+	lastError: {
+		type: ["string", "null"],
+		description:
+			"Drive or workbook error code; no record values or mount paths.",
+	},
+	nextAttemptAt: {
+		type: ["string", "null"],
+		format: "date-time",
+	},
+	externalChangeAt: {
+		type: ["string", "null"],
+		format: "date-time",
+	},
+	externalChanges: { type: "integer" },
+};
+
+function mirrorPaths(): Json {
+	return {
+		"/mirror/status": {
+			get: {
+				tags: ["operations"],
+				operationId: "mirror.status",
+				summary: "Mirror health per collection",
+				security: [{ bearerAuth: [] }],
+				responses: {
+					"200": {
+						description: "Mirror state; no record values.",
+						content: {
+							[JSON_TYPE]: {
+								schema: {
+									type: "object",
+									additionalProperties: false,
+									required: ["collections"],
+									properties: {
+										collections: {
+											type: "array",
+											items: ref("MirrorStatus"),
+										},
+									},
+								},
+							},
+						},
+					},
+					"401": problemResponse(401),
+					"403": problemResponse(403),
+				},
+			},
+		},
+		"/mirror": {
+			post: {
+				tags: ["operations"],
+				operationId: "mirror.rebuild",
+				summary: "Force mirror regeneration",
+				security: [{ bearerAuth: [] }],
+				parameters: [
+					{
+						name: "collection",
+						in: "query",
+						required: false,
+						description:
+							"Collection to rebuild; omit to rebuild every collection.",
+						schema: { type: "string" },
+					},
+				],
+				responses: {
+					"202": {
+						description: "Rebuild scheduled.",
+						content: {
+							[JSON_TYPE]: {
+								schema: {
+									type: "object",
+									required: ["status", "collections"],
+									properties: {
+										status: { type: "string", enum: ["accepted"] },
+										collections: {
+											type: "array",
+											items: { type: "string" },
+										},
+									},
+								},
+							},
+						},
+					},
+					"401": problemResponse(401),
+					"403": problemResponse(403),
+					"404": problemResponse(404, "Unknown collection name."),
+				},
+			},
+		},
+	};
+}
+
 const READY_PATHS: Json = {
 	"/ready": {
 		get: {
@@ -474,9 +575,30 @@ export function registerDocs(
 		...HEALTH_PATHS,
 		...(options.ready ? READY_PATHS : {}),
 	};
+	if (config.mirror !== undefined) {
+		Object.assign(paths, mirrorPaths());
+	}
 	for (const [name, collection] of Object.entries(config.collections)) {
 		Object.assign(schemas, collectionSchemas(name, collection));
 		Object.assign(paths, collectionPaths(name, collection));
+	}
+	if (config.mirror !== undefined) {
+		schemas.MirrorStatus = {
+			type: "object",
+			additionalProperties: false,
+			required: [
+				"name",
+				"lastMirroredAt",
+				"lagSeconds",
+				"pendingWrites",
+				"failures",
+				"lastError",
+				"nextAttemptAt",
+				"externalChangeAt",
+				"externalChanges",
+			],
+			properties: MIRROR_STATUS_FIELDS,
+		};
 	}
 	Object.assign(schemas, SHARED_SCHEMAS);
 
