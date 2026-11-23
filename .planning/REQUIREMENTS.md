@@ -61,7 +61,7 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [x] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
 - [x] **MIRR-06**: The mirror is not re-uploaded when its content has not changed (deterministic workbook plus content hash)
 - [x] **MIRR-07**: A missed mirror update (crash between write and mirror) is recovered automatically by a reconciler on boot and periodically
-- [ ] **MIRR-08**: Operator (apiKey) can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB
+- [x] **MIRR-08**: Operator (apiKey) can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB
 
 ### Read-only Content
 
@@ -173,7 +173,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIRR-05 | Phase 3 | Complete |
 | MIRR-06 | Phase 3 | Complete |
 | MIRR-07 | Phase 3 | Complete |
-| MIRR-08 | Phase 3 | Pending |
+| MIRR-08 | Phase 3 | Complete |
 | READ-01 | Phase 4 | Pending |
 | READ-02 | Phase 4 | Pending |
 | READ-03 | Phase 4 | Pending |
