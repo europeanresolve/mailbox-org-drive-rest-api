@@ -156,9 +156,11 @@ describe("nested collections: routes, grants, mirror folders", () => {
 			const flatItems = (await flatList.json()) as {
 				items: { email: string }[];
 			};
-			expect(flatItems.items.every((item) => item.email !== "nested@example.invalid")).toBe(
-				true,
-			);
+			expect(
+				flatItems.items.every(
+					(item) => item.email !== "nested@example.invalid",
+				),
+			).toBe(true);
 
 			const ambiguous = await app.fetch("/v1/events/2026", {
 				headers: { authorization: auth },
@@ -192,7 +194,9 @@ describe("nested collections: routes, grants, mirror folders", () => {
 				50,
 			);
 			const topNames = await listMirror(folder);
-			expect(topNames).toEqual(expect.arrayContaining(["events", "events.xlsx"]));
+			expect(topNames).toEqual(
+				expect.arrayContaining(["events", "events.xlsx"]),
+			);
 
 			const nestedFolderList = await listMirror(folder, "events/2026");
 			expect(nestedFolderList).toEqual(["signups.xlsx"]);

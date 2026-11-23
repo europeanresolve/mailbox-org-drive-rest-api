@@ -235,7 +235,10 @@ function buildNestedDocument(
 ): Record<string, unknown> {
 	const normalized: Record<string, unknown> = {};
 	for (const [name, entry] of Object.entries(collections)) {
-		const e = entry as { schema?: Record<string, unknown>; operations?: Record<string, string> };
+		const e = entry as {
+			schema?: Record<string, unknown>;
+			operations?: Record<string, string>;
+		};
 		normalized[name] = {
 			schema: e.schema ?? {
 				type: "object",
@@ -251,6 +254,7 @@ function buildNestedDocument(
 			webdav: {
 				url: "https://dav.example.invalid/",
 				username: "user@example.invalid",
+				// biome-ignore lint/suspicious/noTemplateCurlyInString: deployer env placeholder
 				password: "${WEBDAV_APP_PASSWORD}",
 			},
 		},
@@ -375,10 +379,9 @@ describe("nested collection names (03-06)", () => {
 	});
 
 	it("reports unknown grant for an unconfigured nested collection", () => {
-		const error = nestedFailure(
-			{ events: { operations: baseOps } },
-			[{ name: "k", hash: HASH, grants: ["events/2027:create"] }],
-		);
+		const error = nestedFailure({ events: { operations: baseOps } }, [
+			{ name: "k", hash: HASH, grants: ["events/2027:create"] },
+		]);
 		expect(
 			has(error.issues, "apiKey.UNKNOWN_GRANT", "/apiKeys/0/grants/0"),
 		).toBe(true);
@@ -447,7 +450,16 @@ describe("nested collection names (03-06)", () => {
 		});
 	}
 
-	for (const name of ["a(b)", "a[0]", "a:b", "a/b", "a\\b", "a?", "a*", "it's"]) {
+	for (const name of [
+		"a(b)",
+		"a[0]",
+		"a:b",
+		"a/b",
+		"a\\b",
+		"a?",
+		"a*",
+		"it's",
+	]) {
 		it(`rejects mirror-unsafe root property ${name}`, () => {
 			const schema = {
 				type: "object",

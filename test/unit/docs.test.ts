@@ -403,9 +403,9 @@ describe("nested collection OpenAPI names (03-06)", () => {
 		expect(components["events_2026_signups.input"]).toBeDefined();
 		expect(components["events_2026_signups.record"]).toBeDefined();
 		expect(components["events_2026_signups.page"]).toBeDefined();
-		expect(
-			doc.paths["/v1/events/2026/signups"]?.post?.operationId,
-		).toBe("events_2026_signups.create");
+		expect(doc.paths["/v1/events/2026/signups"]?.post?.operationId).toBe(
+			"events_2026_signups.create",
+		);
 		const keyPattern = /^[a-zA-Z0-9._-]+$/;
 		for (const name of Object.keys(components)) {
 			expect(name, name).toMatch(keyPattern);
