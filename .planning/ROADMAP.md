@@ -80,11 +80,11 @@ Plans (listed in wave order):
   3. With two instances running, a two-instance integration test shows only one writes the mirror at a time; each write is a direct PUT over the final file per the spike, with no temp files; and an unchanged collection is not re-uploaded
   4. After a crash between a record write and its mirror update, the mirror catches up automatically through the boot-time and periodic reconciler, with no manual step
   5. Operator with an API key can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB, and Deployer can run the single container image as role `api`, `worker` or `all` needing only MongoDB (no Kong or Keycloak)
-**Plans:** 1/8 plans executed
+**Plans:** 2/8 plans executed
 
 Plans (listed in wave order):
 - [x] 03-01-PLAN.md — Tracer: exceljs, mirror config, dirty mark, direct PUT mirror for one collection, ROLE (wave 1)
-- [ ] 03-02-PLAN.md — Main sheet columns, formula/XML guards, dates, content hash (wave 2)
+- [x] 03-02-PLAN.md — Main sheet columns, formula/XML guards, dates, content hash (wave 2)
 - [ ] 03-04-PLAN.md — Mongo lease, fencing, hash skip, external-change overwrite, two-instance test (wave 2)
 - [ ] 03-06-PLAN.md — Nested collection names, routes, grants, mirror folders, unsafe property check (wave 2)
 - [ ] 03-03-PLAN.md — Array sheets, TEXTJOIN/COUNTIF summary formulas, sheet naming (wave 3)
@@ -114,5 +114,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundations, OX Spike and Storage Layer | 12/12 | In Progress | - |
 | 2. Collections, Access Policy and Anonymous Hardening | 8/8 | Complete    | 2026-11-22 |
-| 3. Mirror Worker | 1/8 | In Progress | - |
+| 3. Mirror Worker | 2/8 | In Progress | - |
 | 4. Read-only Content | 0/TBD | Not started | - |

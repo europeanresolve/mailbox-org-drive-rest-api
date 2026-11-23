@@ -58,8 +58,8 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 - [ ] **MIRR-02**: Only one writer updates a mirror at a time, even with several replicas (Mongo lease with fencing), verified by a two-instance test
 - [x] **MIRR-03**: Mirror writes use a direct PUT over the final file, per the spike (P-17); no temp files are created
 - [x] **MIRR-04**: Mirror columns follow the schema, in a stable order
-- [ ] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
-- [ ] **MIRR-06**: The mirror is not re-uploaded when its content has not changed (deterministic workbook plus content hash)
+- [x] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
+- [x] **MIRR-06**: The mirror is not re-uploaded when its content has not changed (deterministic workbook plus content hash)
 - [ ] **MIRR-07**: A missed mirror update (crash between write and mirror) is recovered automatically by a reconciler on boot and periodically
 - [ ] **MIRR-08**: Operator (apiKey) can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB
 
@@ -170,8 +170,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIRR-02 | Phase 3 | Pending |
 | MIRR-03 | Phase 3 | Complete |
 | MIRR-04 | Phase 3 | Complete |
-| MIRR-05 | Phase 3 | Pending |
-| MIRR-06 | Phase 3 | Pending |
+| MIRR-05 | Phase 3 | Complete |
+| MIRR-06 | Phase 3 | Complete |
 | MIRR-07 | Phase 3 | Pending |
 | MIRR-08 | Phase 3 | Pending |
 | READ-01 | Phase 4 | Pending |
