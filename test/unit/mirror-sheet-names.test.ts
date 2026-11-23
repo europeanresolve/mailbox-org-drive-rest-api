@@ -38,7 +38,7 @@ describe("SheetNamer", () => {
 		];
 		for (const name of names) {
 			expect(name.length).toBeLessThanOrEqual(31);
-			expect(name).not.toMatch(/[:\\/?*\[\]]/);
+			expect(name).not.toMatch(/[:\\/?*[\]]/);
 		}
 		expect(new SheetNamer().name("tags")).toBe("tags");
 		expect(new SheetNamer().name("tags")).toBe("tags");
@@ -82,7 +82,11 @@ describe("planArraySheets", () => {
 		const outer = plans[0];
 		expect(outer?.sheetCandidate).toBe("systems");
 		expect(outer?.summaryKind).toBe("countif");
-		expect(outer?.columns.map((c) => c.header)).toEqual(["id", "index", "name"]);
+		expect(outer?.columns.map((c) => c.header)).toEqual([
+			"id",
+			"index",
+			"name",
+		]);
 		const template = outer?.elementTemplates?.[0];
 		expect(template?.sheetCandidate(0)).toBe("systems(0).planets");
 		expect(template?.sheetCandidate(1)).toBe("systems(1).planets");

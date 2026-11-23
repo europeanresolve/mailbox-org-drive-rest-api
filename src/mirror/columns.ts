@@ -25,6 +25,29 @@ export type ColumnPlan = {
 	arrays: ArrayField[];
 };
 
+export type SummaryKind = "textjoin" | "countif";
+
+export type ArraySheetColumn = {
+	header: string;
+	kind: ColumnKind;
+};
+
+export type ElementSheetTemplate = {
+	sheetCandidate: (outerIndex: number) => string;
+	nestedPath: readonly string[];
+	columns: ArraySheetColumn[];
+	summaryKind: SummaryKind;
+	elementTemplates?: ElementSheetTemplate[];
+};
+
+export type ArraySheetPlan = {
+	path: readonly string[];
+	sheetCandidate: string;
+	columns: ArraySheetColumn[];
+	summaryKind: SummaryKind;
+	elementTemplates?: ElementSheetTemplate[];
+};
+
 type JsonSchema = {
 	type?: unknown;
 	format?: unknown;
@@ -135,4 +158,185 @@ export function planColumns(
 	);
 
 	return { main, arrays };
+}
+
+function itemScalarKind(def: JsonSchema): ColumnKind {
+	const resolved = resolveScalarType(def);
+	if (resolved === "array" || resolved === "object" || resolved === "json") {
+		return "json";
+	}
+	return resolved;
+}
+
+function isScalarArrayItem(items: unknown): boolean {
+	if (!isJsonSchema(items)) return true;
+	const resolved = resolveScalarType(items);
+	return resolved !== "array" && resolved !== "object";
+}
+
+function fieldPathKey(path: readonly string[]): string {
+	return path.join(".");
+}
+
+function planNestedElementTemplates(
+	outerPath: readonly string[],
+	prefix: readonly string[],
+	properties: Record<string, unknown>,
+): ElementSheetTemplate[] {
+	const templates: ElementSheetTemplate[] = [];
+	for (const [key, raw] of Object.entries(properties)) {
+		if (!isJsonSchema(raw)) continue;
+		const nestedPath = [...prefix, key];
+		if (resolveScalarType(raw) !== "array") continue;
+		const base = fieldPathKey(outerPath);
+		const nestedKey = fieldPathKey(nestedPath);
+		const items = raw.items;
+		const template: ElementSheetTemplate = {
+			nestedPath,
+			sheetCandidate: (outerIndex) => `${base}(${outerIndex}).${nestedKey}`,
+			columns: [],
+			summaryKind: "textjoin",
+			elementTemplates: [],
+		};
+		if (isScalarArrayItem(items)) {
+			template.columns = [
+				{ header: "id", kind: "string" },
+				{ header: "index", kind: "number" },
+				{
+					header: "value",
+					kind: itemScalarKind(isJsonSchema(items) ? items : {}),
+				},
+			];
+		} else if (isJsonSchema(items) && resolveScalarType(items) === "object") {
+			const props = items.properties;
+			const cols: ArraySheetColumn[] = [
+				{ header: "id", kind: "string" },
+				{ header: "index", kind: "number" },
+			];
+			if (isRecord(props)) {
+				for (const [propKey, propDef] of Object.entries(props)) {
+					if (!isJsonSchema(propDef)) continue;
+					if (resolveScalarType(propDef) === "array") continue;
+					cols.push({
+						header: propKey,
+						kind: itemScalarKind(propDef),
+					});
+				}
+				template.elementTemplates = planNestedElementTemplates(
+					outerPath,
+					[...nestedPath],
+					props,
+				);
+			}
+			template.columns = cols;
+			template.summaryKind = "countif";
+		} else if (isJsonSchema(items) && resolveScalarType(items) === "array") {
+			template.columns = [
+				{ header: "id", kind: "string" },
+				{ header: "index", kind: "number" },
+			];
+			template.summaryKind = "countif";
+			const innerBase = `${base}(${0}).${nestedKey}`;
+			template.elementTemplates = [
+				{
+					nestedPath: [...nestedPath, "__inner__"],
+					sheetCandidate: (innerIndex) =>
+						`${innerBase.replace(`(${0})`, `(${innerIndex})`)}(${innerIndex})`,
+					columns: [
+						{ header: "id", kind: "string" },
+						{ header: "index", kind: "number" },
+						{ header: "value", kind: "number" },
+					],
+					summaryKind: "textjoin",
+				},
+			];
+		}
+		templates.push(template);
+	}
+	return templates;
+}
+
+export function planArraySheets(
+	arrays: readonly ArrayField[],
+): ArraySheetPlan[] {
+	return arrays.map((field) => {
+		const sheetCandidate = fieldPathKey(field.path);
+		const items = field.items;
+
+		if (!isJsonSchema(items)) {
+			return {
+				path: field.path,
+				sheetCandidate,
+				columns: [
+					{ header: "id", kind: "string" },
+					{ header: "index", kind: "number" },
+					{ header: "value", kind: "json" },
+				],
+				summaryKind: "textjoin",
+			};
+		}
+
+		const itemType = resolveScalarType(items);
+
+		if (itemType === "array") {
+			const inner = items.items;
+			const valueKind = isJsonSchema(inner) ? itemScalarKind(inner) : "json";
+			const base = sheetCandidate;
+			return {
+				path: field.path,
+				sheetCandidate,
+				columns: [
+					{ header: "id", kind: "string" },
+					{ header: "index", kind: "number" },
+				],
+				summaryKind: "countif",
+				elementTemplates: [
+					{
+						nestedPath: field.path,
+						sheetCandidate: (outerIndex) => `${base}(${outerIndex})`,
+						columns: [
+							{ header: "id", kind: "string" },
+							{ header: "index", kind: "number" },
+							{ header: "value", kind: valueKind },
+						],
+						summaryKind: "textjoin",
+					},
+				],
+			};
+		}
+
+		if (itemType === "object" && isRecord(items.properties)) {
+			const cols: ArraySheetColumn[] = [
+				{ header: "id", kind: "string" },
+				{ header: "index", kind: "number" },
+			];
+			for (const [key, raw] of Object.entries(items.properties)) {
+				if (!isJsonSchema(raw)) continue;
+				if (resolveScalarType(raw) === "array") continue;
+				cols.push({ header: key, kind: itemScalarKind(raw) });
+			}
+			return {
+				path: field.path,
+				sheetCandidate,
+				columns: cols,
+				summaryKind: "countif",
+				elementTemplates: planNestedElementTemplates(
+					field.path,
+					[],
+					items.properties,
+				),
+			};
+		}
+
+		return {
+			path: field.path,
+			sheetCandidate,
+			columns: [
+				{ header: "id", kind: "string" },
+				{ header: "index", kind: "number" },
+				{ header: "value", kind: itemScalarKind(items) },
+			],
+			summaryKind: "textjoin",
+		};
+	});
 }
