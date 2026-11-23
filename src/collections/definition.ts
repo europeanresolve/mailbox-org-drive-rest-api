@@ -38,6 +38,12 @@ function firstSegment(name: string): string {
 }
 const OPERATIONS: ReadonlySet<string> = new Set(COLLECTION_OPERATIONS);
 
+/** Operator-only grants (D-22); not tied to a collection in `collections:`. */
+export const OPERATOR_GRANTS: ReadonlyMap<
+	string,
+	ReadonlySet<string>
+> = new Map([["mirror", new Set(["status", "rebuild"])]]);
+
 // Issues carry codes and JSON pointers only, never a config value (T-01-16).
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -530,6 +536,11 @@ export function apiKeyIssues(
 				grant.slice(0, colon).includes(":")
 			) {
 				issues.push({ code: "apiKey.INVALID_GRANT", at });
+			} else if (OPERATOR_GRANTS.has(collection)) {
+				const allowed = OPERATOR_GRANTS.get(collection);
+				if (allowed === undefined || !allowed.has(operation)) {
+					issues.push({ code: "apiKey.UNKNOWN_GRANT", at });
+				}
 			} else if (!collections.has(collection) || !OPERATIONS.has(operation)) {
 				issues.push({ code: "apiKey.UNKNOWN_GRANT", at });
 			}
