@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 milestone: v1.0
 current_phase: 03
 current_phase_name: Mirror Worker
-status: executing
-stopped_at: Completed 03-07-PLAN.md
-last_updated: "2026-11-23T06:01:30.000Z"
+status: phase-complete
+stopped_at: Completed 03-08-PLAN.md
+last_updated: "2026-11-23T06:12:00.000Z"
 last_activity: 2026-11-23
-last_activity_desc: Completed 03-07 mirror operator API plan
-state_head: 4272243f0e06ec085330259233c4ab6d0c0dfc8e
+last_activity_desc: Completed 03-08 deployer docs and role matrix plan
+state_head: 636f5c5433ab4ff2c3e4295f5f135cc14f3986bd
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 27
 ---
 
 # Project State
@@ -27,12 +27,12 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 
 ## Current Position
 
-Phase: 03 (Mirror Worker) — EXECUTING
-Plan: 7 of 8
-Status: Ready for next plan
-Last activity: 2026-11-23 — Completed 03-07 mirror operator API plan
+Phase: 03 (Mirror Worker) — COMPLETE
+Plan: 8 of 8
+Status: Phase complete — ready for Phase 4 or ship
+Last activity: 2026-11-23 — Completed 03-08 deployer docs and role matrix
 
-Progress: [██████░░░░] 54%
+Progress: [███████░░░] 68%
 
 ## Performance Metrics
 
@@ -80,6 +80,8 @@ Progress: [██████░░░░] 54%
 | Phase 03 P02 | 35min | 2 tasks | 5 files |
 | Phase 03 P03 | 4min | 2 tasks | 6 files |
 | Phase 03 P05 | 23min | 3 tasks | 10 files |
+| Phase 03 P07 | 5min | 3 tasks | 8 files |
+| Phase 03 P08 | 10min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -130,6 +132,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-08: <name>.record extends the input schema's properties and required instead of allOf, so a closed input schema stays satisfiable; error statuses listed per operation as the code can produce them
 - [Phase 03]: 03-01: D-05 mirror config option A; exceljs only in workbook.ts; direct PUT tracer
 - [Phase 03]: 03-05: isDue drives debounce, max-wait, reconcile and backoff; non-xlsx mount bytes bypass hash/etag skip
+- [Phase 03]: 03-08: Mirror operator OpenAPI paths use fixed entries like /health when mirror is configured
 - [Phase 03]: ArrayField.position indexes the last main column before an array property
 - [Phase 03]: contentHash hashes model JSON with MIRROR_FORMAT_VERSION, not xlsx bytes
 
@@ -155,6 +158,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-11-23T05:19:35.738Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-11-23T06:12:00.000Z
+Stopped at: Completed 03-08-PLAN.md
 Resume file: None
