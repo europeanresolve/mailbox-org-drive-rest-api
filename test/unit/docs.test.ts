@@ -58,10 +58,12 @@ const COLLECTIONS = {
 function writeConfig(
 	server: Record<string, unknown> | undefined,
 	collections: Record<string, unknown> | undefined,
+	options: { mirror?: boolean } = {},
 ) {
 	const dir = mkdtempSync(join(tmpdir(), "snook-docs-"));
 	try {
 		const file = join(dir, "config.yaml");
+		const includeMirror = options.mirror !== false;
 		writeFileSync(
 			file,
 			stringify({
@@ -75,7 +77,7 @@ function writeConfig(
 					},
 				},
 				mounts: { live: { path: "/live", mode: "read-write" } },
-				mirror: { mount: "live" },
+				...(includeMirror ? { mirror: { mount: "live" } } : {}),
 				...(collections ? { collections } : {}),
 			}),
 		);
@@ -89,8 +91,9 @@ function writeConfig(
 function docsApp(
 	server?: Record<string, unknown>,
 	collections: Record<string, unknown> | null = COLLECTIONS,
+	mirror = true,
 ) {
-	const config = writeConfig(server, collections ?? undefined);
+	const config = writeConfig(server, collections ?? undefined, { mirror });
 	const db = new MongoClient(config.mongo.uri).db();
 	return buildApp({
 		logger: { level: "silent" },
@@ -103,8 +106,9 @@ function docsApp(
 async function documentOf(
 	server: Record<string, unknown> | undefined = { docs: true },
 	collections: Record<string, unknown> | null = COLLECTIONS,
+	mirror = true,
 ): Promise<{ text: string; doc: Json }> {
-	const app = docsApp(server, collections);
+	const app = docsApp(server, collections, mirror);
 	try {
 		const res = await app.inject({ method: "GET", url: "/docs/json" });
 		expect(res.statusCode).toBe(200);
@@ -193,6 +197,8 @@ describe("GET /docs/json", () => {
 		expect(Object.keys(doc.paths)).toEqual([
 			"/health",
 			"/ready",
+			"/mirror/status",
+			"/mirror",
 			"/v1/contact",
 			"/v1/contact/{id}",
 			"/v1/staff",
@@ -218,6 +224,7 @@ describe("GET /docs/json", () => {
 			"staff.input",
 			"staff.record",
 			"staff.page",
+			"MirrorStatus",
 			"AnonymousCreated",
 			"Problem",
 		]);
@@ -369,9 +376,14 @@ describe("GET /docs/json", () => {
 		expect(first.text).toBe(second.text);
 	});
 
-	it("with no collections has only /health and /ready and no /v1 path", async () => {
+	it("with no collections has only health, ready and mirror operator routes", async () => {
 		const { doc } = await documentOf({ docs: true }, null);
-		expect(Object.keys(doc.paths)).toEqual(["/health", "/ready"]);
+		expect(Object.keys(doc.paths)).toEqual([
+			"/health",
+			"/ready",
+			"/mirror/status",
+			"/mirror",
+		]);
 		expect(doc.openapi).toBe("3.1.0");
 		expect(doc.components.securitySchemes.bearerAuth).toBeDefined();
 	});
@@ -410,6 +422,54 @@ describe("nested collection OpenAPI names (03-06)", () => {
 		for (const name of Object.keys(components)) {
 			expect(name, name).toMatch(keyPattern);
 		}
+	});
+});
+
+const MIRROR_STATUS_FIELDS = [
+	"name",
+	"lastMirroredAt",
+	"lagSeconds",
+	"pendingWrites",
+	"failures",
+	"lastError",
+	"nextAttemptAt",
+	"externalChangeAt",
+	"externalChanges",
+] as const;
+
+describe("mirror operator OpenAPI (03-08)", () => {
+	it("documents /mirror/status and POST /mirror when mirror is configured", async () => {
+		const { doc } = await documentOf();
+		const status = doc.paths["/mirror/status"]?.get;
+		expect(status.security).toEqual([{ bearerAuth: [] }]);
+		for (const statusCode of ["200", "401", "403"]) {
+			expect(status.responses[statusCode], statusCode).toBeDefined();
+		}
+		const statusSchema =
+			status.responses["200"].content["application/json"].schema;
+		expect(statusSchema.properties.collections.items).toEqual({
+			$ref: "#/components/schemas/MirrorStatus",
+		});
+		expect(doc.components.schemas.MirrorStatus.required.sort()).toEqual(
+			[...MIRROR_STATUS_FIELDS].sort(),
+		);
+
+		const rebuild = doc.paths["/mirror"]?.post;
+		expect(rebuild.security).toEqual([{ bearerAuth: [] }]);
+		const collectionParam = rebuild.parameters?.find(
+			(p: Json) => p.name === "collection",
+		);
+		expect(collectionParam).toMatchObject({ in: "query", required: false });
+		for (const statusCode of ["202", "401", "403", "404"]) {
+			expect(rebuild.responses[statusCode], statusCode).toBeDefined();
+		}
+	});
+
+	it("omits mirror operator paths when mirror is not configured", async () => {
+		const { doc } = await documentOf({ docs: true }, null, false);
+		expect(doc.paths["/mirror/status"]).toBeUndefined();
+		expect(doc.paths["/mirror"]).toBeUndefined();
+		expect(doc.components.schemas.MirrorStatus).toBeUndefined();
 	});
 });
 

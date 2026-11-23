@@ -35,6 +35,8 @@ export type CollectionsAppOptions = {
 	mirror?: boolean;
 	/** Override the MongoDB database name (close does not drop it). */
 	dbName?: string;
+	/** Extra keys under the `mirror:` block (for example `maxCellLength`). */
+	mirrorConfig?: Record<string, unknown>;
 };
 
 export type CollectionsApp = {
@@ -119,7 +121,10 @@ export async function collectionsApp(
 			},
 		},
 		mounts,
-		mirror: { mount: useMirrorMount ? "mirror" : "live" },
+		mirror: {
+			mount: useMirrorMount ? "mirror" : "live",
+			...(options.mirrorConfig ?? {}),
+		},
 		...(options.server ? { server: options.server } : {}),
 		collections: options.collections,
 		apiKeys: (options.keys ?? []).map((k) => ({
