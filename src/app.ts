@@ -1,11 +1,13 @@
 import Fastify, { type FastifyInstance, LogController } from "fastify";
 import type { Db } from "mongodb";
 import type { DestinationStream } from "pino";
+import type { KeyStore } from "./auth/api-keys.ts";
 import { registerCollections } from "./collections/routes.ts";
 import type { Config } from "./config/schema.ts";
 import { registerDocs } from "./http/docs.ts";
 import { type ReadinessChecks, registerHealthRoutes } from "./http/health.ts";
 import { loggerOptions, registerLogging } from "./http/logging.ts";
+import { registerMirrorRoutes } from "./mirror/routes.ts";
 import type { MirrorStateStore } from "./mirror/state.ts";
 
 export interface AppOptions {
@@ -13,7 +15,14 @@ export interface AppOptions {
 	/** Without checks only /health is registered. */
 	checks?: ReadinessChecks;
 	/** Without it no collection routes are registered. */
-	collections?: { config: Config; db: Db; mirrorState?: MirrorStateStore };
+	collections?: {
+		config: Config;
+		db: Db;
+		keyStore?: KeyStore;
+		mirrorState?: MirrorStateStore;
+	};
+	/** Operator mirror routes; registered whenever mirror is configured. */
+	mirror?: { keyStore: KeyStore; state: MirrorStateStore; names: string[] };
 	/**
 	 * Proxy IPs or CIDRs whose X-Forwarded-For is believed. Empty or absent means the
 	 * header is never read and the socket address is the client (D-10).
@@ -43,6 +52,9 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
 		});
 	}
 	registerHealthRoutes(app, options.checks);
+	if (options.mirror) {
+		registerMirrorRoutes(app, options.mirror);
+	}
 	if (options.collections) registerCollections(app, options.collections);
 	return app;
 }

@@ -28,9 +28,22 @@ export type MirrorState = {
 	externalChanges?: number;
 	pendingSince?: Date;
 	reconcileRequested?: boolean;
+	forceUpload?: boolean;
 	failures?: number;
 	nextAttemptAt?: Date;
 	lastError?: MirrorErrorCode | null;
+};
+
+export type MirrorCollectionStatus = {
+	name: string;
+	lastMirroredAt: string | null;
+	lagSeconds: number;
+	pendingWrites: number;
+	failures: number;
+	lastError: MirrorErrorCode | null;
+	nextAttemptAt: string | null;
+	externalChangeAt: string | null;
+	externalChanges: number;
 };
 
 export class MirrorStateStore {
@@ -65,6 +78,64 @@ export class MirrorStateStore {
 				{ upsert: true },
 			);
 		}
+	}
+
+	async requestRebuild(names: readonly string[]): Promise<void> {
+		for (const name of names) {
+			await this.#collection.updateOne(
+				{ _id: name },
+				{
+					$set: { forceUpload: true, reconcileRequested: true },
+					$unset: { nextAttemptAt: "" },
+				},
+				{ upsert: true },
+			);
+		}
+	}
+
+	async status(
+		names: readonly string[],
+		now: Date,
+	): Promise<MirrorCollectionStatus[]> {
+		const docs = await this.list(names);
+		const byId = new Map(docs.map((doc) => [doc._id, doc]));
+		return names.map((name) => {
+			const doc = byId.get(name);
+			if (doc === undefined) {
+				return {
+					name,
+					lastMirroredAt: null,
+					lagSeconds: 0,
+					pendingWrites: 0,
+					failures: 0,
+					lastError: null,
+					nextAttemptAt: null,
+					externalChangeAt: null,
+					externalChanges: 0,
+				};
+			}
+			const dirtySeq = doc.dirtySeq ?? 0;
+			const mirroredSeq = doc.mirroredSeq ?? 0;
+			const pendingWrites = Math.max(0, dirtySeq - mirroredSeq);
+			const lagSeconds =
+				pendingWrites > 0 && doc.pendingSince !== undefined
+					? Math.max(
+							0,
+							Math.floor((now.getTime() - doc.pendingSince.getTime()) / 1000),
+						)
+					: 0;
+			return {
+				name,
+				lastMirroredAt: doc.lastMirroredAt?.toISOString() ?? null,
+				lagSeconds,
+				pendingWrites,
+				failures: doc.failures ?? 0,
+				lastError: doc.lastError ?? null,
+				nextAttemptAt: doc.nextAttemptAt?.toISOString() ?? null,
+				externalChangeAt: doc.externalChangeAt?.toISOString() ?? null,
+				externalChanges: doc.externalChanges ?? 0,
+			};
+		});
 	}
 
 	async recordFailure(
@@ -120,6 +191,7 @@ export class MirrorStateStore {
 		const set: Record<string, unknown> = {
 			mirroredSeq: fields.seq,
 			reconcileRequested: false,
+			forceUpload: false,
 			failures: 0,
 			lastError: null,
 		};

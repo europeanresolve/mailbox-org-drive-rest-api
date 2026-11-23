@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import pino, { type DestinationStream } from "pino";
 import { buildApp } from "./app.ts";
+import { ConfigKeyStore } from "./auth/api-keys.ts";
 import { ensureIndexes, scheduleIndexSetup } from "./collections/indexes.ts";
 import { RecordStore } from "./collections/store.ts";
 import { ConfigError, loadConfig } from "./config/load.ts";
@@ -54,6 +55,8 @@ export async function start(
 				: resolveTimings(config.mirror, options.mirrorTimings);
 		const mirrorState =
 			timings === undefined ? undefined : new MirrorStateStore(db, timings);
+		const keyStore = new ConfigKeyStore(config.apiKeys);
+		const collectionNames = Object.keys(config.collections);
 		// The closure lets the app be built before driveHealth exists.
 		let driveHealth: ReturnType<typeof createDriveHealth> | undefined;
 		const app = buildApp({
@@ -71,9 +74,19 @@ export async function start(
 						collections: {
 							config,
 							db,
+							keyStore,
 							...(mirrorState === undefined ? {} : { mirrorState }),
 						},
 					}),
+			...(config.mirror !== undefined && mirrorState !== undefined
+				? {
+						mirror: {
+							keyStore,
+							state: mirrorState,
+							names: collectionNames,
+						},
+					}
+				: {}),
 			trustProxy: config.server.trustProxy,
 			docs: config.server.docs,
 		});

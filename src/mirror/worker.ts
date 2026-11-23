@@ -160,6 +160,7 @@ export class MirrorWorker {
 			const storedHash = current.contentHash;
 			const lastEtag = current.lastWrittenEtag;
 			let skip =
+				!current.forceUpload &&
 				storedHash === contentHash &&
 				fileExists &&
 				fileEtag === lastEtag &&
