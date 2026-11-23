@@ -87,7 +87,7 @@ Plans (listed in wave order):
 - [x] 03-02-PLAN.md — Main sheet columns, formula/XML guards, dates, content hash (wave 2)
 - [ ] 03-04-PLAN.md — Mongo lease, fencing, hash skip, external-change overwrite, two-instance test (wave 2)
 - [x] 03-06-PLAN.md — Nested collection names, routes, grants, mirror folders, unsafe property check (wave 2) — 2026-11-23
-- [ ] 03-03-PLAN.md — Array sheets, TEXTJOIN/COUNTIF summary formulas, sheet naming (wave 3)
+- [x] 03-03-PLAN.md — Array sheets, TEXTJOIN/COUNTIF summary formulas, sheet naming (wave 3)
 - [ ] 03-05-PLAN.md — Debounce, max wait, boot and periodic reconciliation (wave 3)
 - [ ] 03-07-PLAN.md — GET /mirror/status and POST /mirror operator routes (wave 4)
 - [ ] 03-08-PLAN.md — ROLE integration test, mirror canary, OpenAPI, README (wave 5)
