@@ -119,9 +119,26 @@ describe("nested collections: routes, grants, mirror folders", () => {
 			expect(patchRes.status).toBe(200);
 
 			const stored = await app.db
-				.collection("records_events/2026/signups")
+				.collection<{ _id: string; data: { email: string } }>(
+					"records_events/2026/signups",
+				)
 				.findOne({ _id: nestedBody.id });
 			expect(stored?.data?.email).toBe("patched@example.invalid");
+
+			const folder = app.mirrorFolder;
+			await waitUntil(
+				async () =>
+					(await fetchMirror(folder, "events/2026/signups.xlsx")) !== null,
+				5000,
+				50,
+			);
+			const nestedBytes = await fetchMirror(folder, "events/2026/signups.xlsx");
+			expect(nestedBytes).not.toBeNull();
+			const nestedSheet = await readRows(nestedBytes as Buffer, "signups");
+			expect(nestedSheet.sheet).toBe("signups");
+			expect(nestedSheet.rows.some((row) => row[0] === nestedBody.id)).toBe(
+				true,
+			);
 
 			const flatCreate = await app.fetch("/v1/events", {
 				method: "POST",
@@ -168,19 +185,6 @@ describe("nested collections: routes, grants, mirror folders", () => {
 				},
 			);
 			expect(delRes.status).toBe(204);
-
-			const folder = app.mirrorFolder;
-			await waitUntil(
-				async () =>
-					(await fetchMirror(folder, "events/2026/signups.xlsx")) !== null,
-				5000,
-				50,
-			);
-			const nestedBytes = await fetchMirror(folder, "events/2026/signups.xlsx");
-			expect(nestedBytes).not.toBeNull();
-			const nestedSheet = await readRows(nestedBytes as Buffer, "signups");
-			expect(nestedSheet.sheet).toBe("signups");
-			expect(nestedSheet.rows.some((row) => row[0] === nestedBody.id)).toBe(true);
 
 			await waitUntil(
 				async () => (await fetchMirror(folder, "events.xlsx")) !== null,

@@ -37,6 +37,11 @@ function version(): string {
 
 const ref = (name: string): Json => ({ $ref: `${SCHEMAS}${name}` });
 
+/** OpenAPI component keys cannot contain `/`; collection routes and paths keep slashes. */
+function componentBase(name: string): string {
+	return name.replaceAll("/", "_");
+}
+
 /** Keywords whose value is data, not schema: a `$ref` key inside is not a reference. */
 const DATA_KEYWORDS: ReadonlySet<string> = new Set([
 	"enum",
@@ -85,19 +90,20 @@ function recordSchema(input: Json): Json {
 }
 
 function collectionSchemas(name: string, collection: CollectionConfig): Json {
+	const base = componentBase(name);
 	const input = rewriteRefs(
 		collection.schema,
-		`${SCHEMAS}${name}.input`,
+		`${SCHEMAS}${base}.input`,
 	) as Json;
 	return {
-		[`${name}.input`]: input,
-		[`${name}.record`]: recordSchema(input),
-		[`${name}.page`]: {
+		[`${base}.input`]: input,
+		[`${base}.record`]: recordSchema(input),
+		[`${base}.page`]: {
 			type: "object",
 			additionalProperties: false,
 			required: ["items", "nextCursor"],
 			properties: {
-				items: { type: "array", items: ref(`${name}.record`) },
+				items: { type: "array", items: ref(`${base}.record`) },
 				nextCursor: {
 					type: ["string", "null"],
 					description: "Pass as `cursor` for the next page; null on the last.",
@@ -287,6 +293,7 @@ function operationDocument(
 	policy: CollectionPolicy,
 	collection: CollectionConfig,
 ): Json {
+	const base = componentBase(name);
 	const anonymous = policy === "anonymous";
 	const parameters: Json[] = [];
 	const responses: Record<string, Json> = {};
@@ -298,13 +305,13 @@ function operationDocument(
 			parameters.push(IDEMPOTENCY_KEY);
 			requestBody = {
 				required: true,
-				content: { [JSON_TYPE]: { schema: ref(`${name}.input`) } },
+				content: { [JSON_TYPE]: { schema: ref(`${base}.input`) } },
 			};
 			responses["201"] = successJson(
 				anonymous
 					? "Created. Anonymous callers get only the id and creation time."
 					: "Created.",
-				ref(anonymous ? "AnonymousCreated" : `${name}.record`),
+				ref(anonymous ? "AnonymousCreated" : `${base}.record`),
 			);
 			for (const status of [400, 409, 413, 415, 422]) errors.add(status);
 			break;
@@ -312,24 +319,24 @@ function operationDocument(
 			parameters.push(...listParameters(collection));
 			responses["200"] = {
 				description: "One page of records.",
-				content: { [JSON_TYPE]: { schema: ref(`${name}.page`) } },
+				content: { [JSON_TYPE]: { schema: ref(`${base}.page`) } },
 			};
 			errors.add(400);
 			break;
 		case "get":
 			parameters.push(ID_PARAMETER);
-			responses["200"] = successJson("The record.", ref(`${name}.record`));
+			responses["200"] = successJson("The record.", ref(`${base}.record`));
 			errors.add(404);
 			break;
 		case "replace":
 			parameters.push(ID_PARAMETER, IF_MATCH);
 			requestBody = {
 				required: true,
-				content: { [JSON_TYPE]: { schema: ref(`${name}.input`) } },
+				content: { [JSON_TYPE]: { schema: ref(`${base}.input`) } },
 			};
 			responses["200"] = successJson(
 				"The record after the change.",
-				ref(`${name}.record`),
+				ref(`${base}.record`),
 			);
 			for (const status of [400, 404, 412, 413, 415]) errors.add(status);
 			break;
@@ -341,14 +348,14 @@ function operationDocument(
 					[MERGE_PATCH]: {
 						schema: {
 							type: "object",
-							description: `RFC 7386 JSON Merge Patch; the merged record must satisfy ${name}.input.`,
+							description: `RFC 7386 JSON Merge Patch; the merged record must satisfy ${base}.input.`,
 						},
 					},
 				},
 			};
 			responses["200"] = successJson(
 				"The record after the change.",
-				ref(`${name}.record`),
+				ref(`${base}.record`),
 			);
 			for (const status of [400, 404, 409, 412, 413, 415]) errors.add(status);
 			break;
@@ -366,7 +373,7 @@ function operationDocument(
 
 	return {
 		tags: [name],
-		operationId: `${name}.${operation}`,
+		operationId: `${base}.${operation}`,
 		summary: `${OPERATIONS[operation].summary} (${name})`,
 		security: anonymous ? [] : [{ bearerAuth: [] }],
 		parameters,
