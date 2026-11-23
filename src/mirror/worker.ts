@@ -1,5 +1,5 @@
-import type { Db } from "mongodb";
 import type { FastifyBaseLogger } from "fastify";
+import type { Db } from "mongodb";
 import type { RecordStore } from "../collections/store.ts";
 import type { Config } from "../config/schema.ts";
 import { StorageError } from "../storage/errors.ts";

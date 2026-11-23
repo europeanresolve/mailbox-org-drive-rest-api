@@ -1,11 +1,16 @@
-import { MongoClient, type Db } from "mongodb";
-import { describe, expect, it, inject } from "vitest";
+import { type Db, MongoClient } from "mongodb";
+import { describe, expect, inject, it } from "vitest";
 import { MirrorLease } from "../../src/mirror/lease.ts";
 import { MirrorStateStore } from "../../src/mirror/state.ts";
 import { resolveTimings } from "../../src/mirror/timings.ts";
-import { STACK } from "../integration/global-setup.ts";
 import { collectionsApp } from "../helpers/collections-app.ts";
-import { fetchMirror, listMirror, readRows, waitUntil } from "../helpers/mirror.ts";
+import {
+	fetchMirror,
+	listMirror,
+	readRows,
+	waitUntil,
+} from "../helpers/mirror.ts";
+import { STACK } from "../integration/global-setup.ts";
 
 const contactCollection = {
 	contact: {
@@ -30,14 +35,20 @@ function leaseDbName(runId: string, tag: string): string {
 	return `it-${runId}-l${tag}${dbCounter++}`;
 }
 
-async function withDb<T>(dbName: string, fn: (db: Db) => Promise<T>): Promise<T> {
+async function withDb<T>(
+	dbName: string,
+	fn: (db: Db) => Promise<T>,
+): Promise<T> {
 	const uri = `${STACK.mongoUri}/${dbName}`;
 	const client = new MongoClient(uri);
 	try {
 		await client.connect();
 		return await fn(client.db());
 	} finally {
-		await client.db().dropDatabase().catch(() => undefined);
+		await client
+			.db()
+			.dropDatabase()
+			.catch(() => undefined);
 		await client.close().catch(() => undefined);
 	}
 }
@@ -154,7 +165,12 @@ describe("mirror lease and fencing", () => {
 			expect(newer).not.toBeNull();
 			await state.fence("contact", newer?.token ?? 0);
 			const before = await db
-				.collection("mirror_state")
+				.collection<{
+					_id: string;
+					mirroredSeq?: number;
+					contentHash?: string;
+					lastWrittenEtag?: string | null;
+				}>("mirror_state")
 				.findOne({ _id: "contact" });
 			const stale = await state.commit("contact", old?.token ?? 0, {
 				seq: 1,
@@ -163,7 +179,12 @@ describe("mirror lease and fencing", () => {
 			});
 			expect(stale).toBe(false);
 			const afterStale = await db
-				.collection("mirror_state")
+				.collection<{
+					_id: string;
+					mirroredSeq?: number;
+					contentHash?: string;
+					lastWrittenEtag?: string | null;
+				}>("mirror_state")
 				.findOne({ _id: "contact" });
 			expect(afterStale?.mirroredSeq ?? 0).toBe(before?.mirroredSeq ?? 0);
 			expect(afterStale?.contentHash).toBe(before?.contentHash);
@@ -213,9 +234,11 @@ describe("mirror lease and fencing", () => {
 				await waitUntil(
 					async () => {
 						const s = await appA.db
-							.collection<{ dirtySeq?: number; mirroredSeq?: number }>(
-								"mirror_state",
-							)
+							.collection<{
+								_id: string;
+								dirtySeq?: number;
+								mirroredSeq?: number;
+							}>("mirror_state")
 							.findOne({ _id: "contact" });
 						return (
 							s?.mirroredSeq !== undefined &&

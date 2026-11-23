@@ -186,7 +186,7 @@ export async function buildWorkbook(
 ): Promise<{ buffer: Buffer; contentHash: string; notes: WorkbookNotes }> {
 	const { main: columns } = planColumns(schema);
 	const sheetName = mirrorSheetName(name);
-	const notes: WorkbookNotes = { truncatedCells: 0 };
+	const notes: WorkbookNotes = { truncatedCells: 0, omittedSheets: 0 };
 
 	const model: SheetModel = {
 		name: sheetName,

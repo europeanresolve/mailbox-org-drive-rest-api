@@ -120,7 +120,7 @@ describe("buildWorkbook array sheets", () => {
 
 		const r1Tags = main.cells[1]?.[tagsCol];
 		expect(r1Tags?.formula).toBe(
-			'_xlfn.TEXTJOIN(", ",TRUE,\'tags\'!$C$2:$C$4)',
+			"_xlfn.TEXTJOIN(\", \",TRUE,'tags'!$C$2:$C$4)",
 		);
 		expect(r1Tags?.value).toBe("a, b, c");
 
@@ -130,7 +130,7 @@ describe("buildWorkbook array sheets", () => {
 
 		const r3Tags = main.cells[3]?.[tagsCol];
 		expect(r3Tags?.formula).toBe(
-			'_xlfn.TEXTJOIN(", ",TRUE,\'tags\'!$C$5:$C$5)',
+			"_xlfn.TEXTJOIN(\", \",TRUE,'tags'!$C$5:$C$5)",
 		);
 
 		const r1Systems = main.cells[1]?.[systemsCol];
