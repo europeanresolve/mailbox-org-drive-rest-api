@@ -40,7 +40,8 @@ describe("planColumns", () => {
 
 	it("assigns kinds for scalars and system columns", () => {
 		const { main } = planColumns(sampleSchema);
-		const kind = (header: string) => main.find((c) => c.header === header)?.kind;
+		const kind = (header: string) =>
+			main.find((c) => c.header === header)?.kind;
 		expect(kind("id")).toBe("string");
 		expect(kind("email")).toBe("string");
 		expect(kind("age")).toBe("number");
@@ -70,9 +71,9 @@ describe("planColumns", () => {
 				type: "object",
 				properties: { x: { [key]: [] } },
 			};
-			expect(
-				planColumns(schema).main.find((c) => c.header === "x")?.kind,
-			).toBe("json");
+			expect(planColumns(schema).main.find((c) => c.header === "x")?.kind).toBe(
+				"json",
+			);
 		}
 		expect(
 			planColumns({

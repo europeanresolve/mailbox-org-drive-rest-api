@@ -2,35 +2,25 @@ import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import type { RecordDocument } from "../collections/store.ts";
 import type { Config } from "../config/schema.ts";
+import { type Column, planColumns } from "./columns.ts";
 import { mirrorSheetName } from "./path.ts";
 
 export type WorkbookNotes = { truncatedCells: number };
 
 const TRUNC_SUFFIX = "…[truncated]";
 
-type ScalarType = "string" | "number" | "integer" | "boolean";
-
-function scalarColumns(
-	schema: Config["collections"][string]["schema"],
-): { key: string; type: ScalarType }[] {
-	const properties = schema.properties as
-		| Record<string, { type?: unknown }>
-		| undefined;
-	if (properties === undefined || typeof properties !== "object") return [];
-	const out: { key: string; type: ScalarType }[] = [];
-	for (const [key, def] of Object.entries(properties)) {
-		if (def === null || typeof def !== "object" || Array.isArray(def)) continue;
-		const type = (def as { type?: unknown }).type;
-		if (
-			type === "string" ||
-			type === "number" ||
-			type === "integer" ||
-			type === "boolean"
-		) {
-			out.push({ key, type });
+function recordValue(record: RecordDocument, column: Column): unknown {
+	if (column.header === "id") return record._id;
+	if (column.header === "createdAt") return record.createdAt;
+	if (column.header === "updatedAt") return record.updatedAt;
+	let cur: unknown = record.data;
+	for (const segment of column.path) {
+		if (cur === null || cur === undefined || typeof cur !== "object") {
+			return undefined;
 		}
+		cur = (cur as Record<string, unknown>)[segment];
 	}
-	return out;
+	return cur;
 }
 
 function truncateString(value: string, maxLen: number): string {
@@ -43,13 +33,13 @@ function truncateString(value: string, maxLen: number): string {
 
 function cellValue(
 	raw: unknown,
-	type: ScalarType,
+	kind: Column["kind"],
 	maxCellLength: number,
 	notes: WorkbookNotes,
 ): string | number | boolean | null {
 	if (raw === undefined || raw === null) return null;
-	if (type === "boolean") return Boolean(raw);
-	if (type === "integer" || type === "number") {
+	if (kind === "boolean") return Boolean(raw);
+	if (kind === "number") {
 		return typeof raw === "number" ? raw : Number(raw);
 	}
 	const text =
@@ -57,7 +47,9 @@ function cellValue(
 			? raw
 			: typeof raw === "number" || typeof raw === "boolean"
 				? String(raw)
-				: null;
+				: kind === "json" && raw !== undefined
+					? JSON.stringify(raw)
+					: null;
 	if (text === null) return null;
 	if (text.length > maxCellLength) {
 		notes.truncatedCells += 1;
@@ -72,20 +64,20 @@ export async function buildWorkbook(
 	records: readonly RecordDocument[],
 	options: { maxCellLength: number },
 ): Promise<{ buffer: Buffer; contentHash: string; notes: WorkbookNotes }> {
-	const columns = scalarColumns(schema);
-	const header = ["id", ...columns.map((c) => c.key), "createdAt", "updatedAt"];
+	const { main: columns } = planColumns(schema);
+	const header = columns.map((c) => c.header);
 	const rows: unknown[][] = [header];
 	const notes: WorkbookNotes = { truncatedCells: 0 };
 
 	for (const record of records) {
-		const row: unknown[] = [
-			record._id,
-			...columns.map((col) =>
-				cellValue(record.data[col.key], col.type, options.maxCellLength, notes),
+		const row = columns.map((col) =>
+			cellValue(
+				recordValue(record, col),
+				col.kind,
+				options.maxCellLength,
+				notes,
 			),
-			record.createdAt,
-			record.updatedAt,
-		];
+		);
 		rows.push(row);
 	}
 
