@@ -227,3 +227,265 @@ describe("collections and apiKeys in invalid-many.yaml", () => {
 		);
 	});
 });
+
+const CLOSED_OBJECT = {
+	type: "object",
+	additionalProperties: false,
+	properties: { n: { type: "string", maxLength: 50 } },
+};
+
+function yamlLines(
+	collections: Record<string, unknown>,
+	apiKeys?: unknown[],
+): string[] {
+	const lines = [
+			"mongo:",
+			"  uri: mongodb://127.0.0.1:27017/nested",
+			"storage:",
+			"  webdav:",
+			"    url: https://dav.example.invalid/",
+			"    username: user@example.invalid",
+			"    password: ${WEBDAV_APP_PASSWORD}",
+			"mounts:",
+			"  forms:",
+			"    path: /forms",
+			"    mode: read-write",
+			"mirror:",
+			"  mount: forms",
+			"collections:",
+		];
+	for (const [name, entry] of Object.entries(collections)) {
+		lines.push(`  ${JSON.stringify(name)}:`);
+		const schema = (entry as { schema?: Record<string, unknown> }).schema;
+		if (schema) {
+			lines.push(`    schema: ${JSON.stringify(schema)}`);
+		} else {
+			lines.push("    schema:");
+			lines.push("      type: object");
+			lines.push("      additionalProperties: false");
+			lines.push("      properties:");
+			lines.push("        n:");
+			lines.push("          type: string");
+			lines.push("          maxLength: 50");
+		}
+		const ops = (entry as { operations?: Record<string, string> }).operations;
+		if (ops) {
+			lines.push("    operations:");
+			for (const [op, policy] of Object.entries(ops)) {
+				lines.push(`      ${op}: ${policy}`);
+			}
+		}
+	}
+	if (apiKeys) {
+		lines.push("apiKeys:");
+		for (const key of apiKeys as {
+			name: string;
+			hash: string;
+			grants: string[];
+		}[]) {
+			lines.push(`  - name: ${key.name}`);
+			lines.push(`    hash: "${key.hash}"`);
+			lines.push("    grants:");
+			for (const grant of key.grants) {
+				lines.push(`      - ${grant}`);
+			}
+		}
+	}
+	return lines;
+}
+
+function loadNestedYaml(
+	collections: Record<string, unknown>,
+	apiKeys?: unknown[],
+) {
+	const dir = mkdtempSync(join(tmpdir(), "snook-nested-cfg-"));
+	try {
+		const file = join(dir, "config.yaml");
+		writeFileSync(file, `${yamlLines(collections, apiKeys).join("\n")}\n`);
+		return loadConfig({ CONFIG_FILE: file, ...ENV });
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+function nestedFailure(
+	collections: Record<string, unknown>,
+	apiKeys?: unknown[],
+): ConfigError {
+	const dir = mkdtempSync(join(tmpdir(), "snook-nested-cfg-"));
+	try {
+		const file = join(dir, "config.yaml");
+		writeFileSync(file, `${yamlLines(collections, apiKeys).join("\n")}\n`);
+		try {
+			loadConfig({ CONFIG_FILE: file, ...ENV });
+		} catch (error) {
+			if (error instanceof ConfigError) return error;
+			throw error;
+		}
+		return expect.fail("expected loadConfig to throw");
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+describe("nested collection names (03-06)", () => {
+	const HASH =
+		"0000000000000000000000000000000000000000000000000000000000000000";
+	const baseOps = { create: "anonymous", get: "apiKey", list: "apiKey" };
+
+	it("loads slash-separated collection names with nested grants", () => {
+		const config = loadNestedYaml(
+			{
+				events: { operations: baseOps },
+				"events/2026": { operations: baseOps },
+				"events/2026/signups": { operations: baseOps },
+			},
+			[
+				{
+					name: "k",
+					hash: HASH,
+					grants: ["events/2026/signups:create", "events:get"],
+				},
+			],
+		);
+		expect(Object.keys(config.collections).sort()).toEqual([
+			"events",
+			"events/2026",
+			"events/2026/signups",
+		]);
+	});
+
+	for (const name of [
+		"events//x",
+		"events/",
+		"/events",
+		"Events/x",
+		"events/X",
+		`events/${"a".repeat(33)}`,
+	]) {
+		it(`rejects invalid collection name ${JSON.stringify(name)} at schema stage`, () => {
+			const error = nestedFailure({ [name]: { operations: baseOps } });
+			expect(
+				error.issues.some(
+					(i) =>
+						i.code === "schema.additionalProperties" &&
+						i.at === `/collections/${name}`,
+				),
+			).toBe(true);
+			expect(JSON.stringify(error.issues)).not.toContain(name);
+		});
+	}
+
+	it("rejects files/x as reserved on the first segment only", () => {
+		const error = nestedFailure({ "files/x": { operations: baseOps } });
+		expect(
+			has(error.issues, "collection.RESERVED_NAME", "/collections/files/x"),
+		).toBe(true);
+	});
+
+	it("accepts x/files and x/mirror", () => {
+		expect(() =>
+			loadNestedYaml({
+				"x/files": { operations: baseOps },
+				"x/mirror": { operations: baseOps },
+			}),
+		).not.toThrow();
+	});
+
+	it("reports unknown grant for an unconfigured nested collection", () => {
+		const error = nestedFailure(
+			{ events: { operations: baseOps } },
+			[{ name: "k", hash: HASH, grants: ["events/2027:create"] }],
+		);
+		expect(
+			has(error.issues, "apiKey.UNKNOWN_GRANT", "/apiKeys/0/grants/0"),
+		).toBe(true);
+	});
+
+	const unsafeProps: [string, Record<string, unknown>][] = [
+		["a(b)", CLOSED_OBJECT],
+		[
+			"nested-object",
+			{
+				type: "object",
+				additionalProperties: false,
+				properties: {
+					ok: { type: "string", maxLength: 1 },
+					"a[0]": { type: "string", maxLength: 1 },
+				},
+			},
+		],
+		[
+			"nested-array",
+			{
+				type: "object",
+				additionalProperties: false,
+				properties: {
+					tags: {
+						type: "array",
+						items: {
+							type: "object",
+							additionalProperties: false,
+							properties: {
+								"a:b": { type: "string", maxLength: 1 },
+							},
+						},
+					},
+				},
+			},
+		],
+	];
+
+	function mirrorUnsafeIssues(
+		collections: Record<string, unknown>,
+	): readonly ConfigIssue[] {
+		try {
+			loadNestedYaml(collections);
+			return [];
+		} catch (error) {
+			if (error instanceof ConfigError) return error.issues;
+			throw error;
+		}
+	}
+
+	for (const [label, schema] of unsafeProps) {
+		it(`reports MIRROR_UNSAFE_PROPERTY_NAME for ${label}`, () => {
+			expect(
+				mirrorUnsafeIssues({ contact: { schema, operations: baseOps } }).some(
+					(i) => i.code === "collection.MIRROR_UNSAFE_PROPERTY_NAME",
+				),
+			).toBe(true);
+		});
+	}
+
+	for (const name of ["a(b)", "a[0]", "a:b", "a/b", "a\\b", "a?", "a*", "it's"]) {
+		it(`rejects mirror-unsafe root property ${name}`, () => {
+			const schema = {
+				type: "object",
+				additionalProperties: false,
+				properties: { [name]: { type: "string", maxLength: 1 } },
+			};
+			expect(
+				has(
+					mirrorUnsafeIssues({ c: { schema, operations: baseOps } }),
+					"collection.MIRROR_UNSAFE_PROPERTY_NAME",
+					`/collections/c/schema/properties/${name}`,
+				),
+			).toBe(true);
+		});
+	}
+
+	it("accepts a-b and a_b property names", () => {
+		const schema = {
+			type: "object",
+			additionalProperties: false,
+			properties: {
+				"a-b": { type: "string", maxLength: 1 },
+				a_b: { type: "string", maxLength: 1 },
+			},
+		};
+		expect(() =>
+			loadNestedYaml({ ok: { schema, operations: baseOps } }),
+		).not.toThrow();
+	});
+});
