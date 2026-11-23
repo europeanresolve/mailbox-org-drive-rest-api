@@ -121,9 +121,17 @@ export async function readRows(
 		const values: unknown[] = [];
 		const rowCells: MirrorCell[] = [];
 		row.eachCell({ includeEmpty: true }, (cell, col) => {
-			values[col - 1] = cell.value;
+			const raw = cell.value;
+			const value =
+				raw !== null &&
+				typeof raw === "object" &&
+				"result" in raw &&
+				typeof (raw as { formula?: string }).formula === "string"
+					? (raw as { result: unknown }).result
+					: raw;
+			values[col - 1] = value;
 			rowCells[col - 1] = {
-				value: cell.value,
+				value,
 				type: cell.type,
 				...(cell.formula === undefined ? {} : { formula: cell.formula }),
 				...(cell.hyperlink === undefined

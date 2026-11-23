@@ -150,7 +150,7 @@ describe("buildWorkbook array sheets", () => {
 		const built = await buildWorkbook(
 			"contact",
 			arraySchema,
-			[record("x", { tags: ["=1+1"], email: "x" })],
+			[record("inj1", { tags: ["=1+1"], email: "inj@ex.invalid" })],
 			{ maxCellLength: 32767 },
 		);
 		const tags = await readRows(built.buffer, "tags");
@@ -159,7 +159,8 @@ describe("buildWorkbook array sheets", () => {
 		const blob = formulas.join("\n");
 		expect(blob).not.toContain("=1+1");
 		expect(blob).not.toContain("@");
-		expect(blob).not.toContain("x");
+		expect(blob).not.toContain("inj1");
+		expect(blob).not.toContain("inj@ex.invalid");
 		for (const f of formulas) {
 			expect(f).toMatch(FORMULA_RE);
 		}
