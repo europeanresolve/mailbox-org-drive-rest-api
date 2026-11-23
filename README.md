@@ -10,7 +10,7 @@ A self-hostable REST API that puts a **mailbox.org Drive** (or another WebDAV st
 
 > **Unofficial project.** Not affiliated with, endorsed by or supported by mailbox.org / Heinlein Support GmbH or Open-Xchange. "mailbox.org" is used only to describe compatibility.
 
-> **Status: pre-alpha.** Collections with API keys and hardened anonymous form submission work; the `.xlsx` mirror, sheets, documents and files below are still planned. Anything marked planned may change. Planning artefacts live in [`.planning/`](.planning/).
+> **Status: pre-alpha.** Collections with API keys, anonymous form submission and the spreadsheet mirror worker work; sheets, documents and files below are still planned. Anything marked planned may change. Planning artefacts live in [`.planning/`](.planning/).
 
 ---
 
@@ -85,7 +85,7 @@ apiKeys:
     grants: ["contact:list", "contact:get", "contact:delete"]
 ```
 
-The `.xlsx` mirror of a collection and the sheets, documents and files endpoints are planned for later phases and are not in the config yet:
+The sheets, documents and files endpoints are planned for later phases and are not in the config yet:
 
 ```
 GET /v1/sheets/{sheet}                 (planned)
@@ -174,6 +174,68 @@ Set `server.docs: true` to serve an OpenAPI 3.1 document at `/docs/json` and an 
 
 It is **off by default**: the document reveals collection names and schemas to anyone who can reach `/docs`. Turn it on for development, or in production restrict the `docs` route at the gateway (see [`deploy/kong.yml`](deploy/kong.yml)).
 
+## Spreadsheet mirror
+
+Each collection with a `mirror` block gets a **read-only-for-people** `.xlsx` workbook on a dedicated read-write mount. MongoDB stays the system of record; one background writer regenerates the file after API writes. Staff open the workbook on the Drive; the API does not serve spreadsheet bytes on collection routes.
+
+### Configuration
+
+The mirror block is **required** once any collection is defined:
+
+```yaml
+mounts:
+  forms: { path: "/Userstore/Example Service/forms", mode: read-write }  # dedicated mirror folder
+mirror:
+  mount: forms
+  # debounceSeconds: 15
+  # maxWaitSeconds: 180
+  # reconcileMinutes: 15
+  # maxCellLength: 32767
+```
+
+Use a **dedicated read-write mount** that is not reused for uploads staff edit by hand. The worker overwrites `<collection>.xlsx` on every successful pass; anything else in that folder can be replaced.
+
+Defaults: 15 s debounce after the last write, 180 s maximum debounce, reconcile every 15 minutes, 32 767 characters per cell. See [`config/config.example.yaml`](config/config.example.yaml) for comments on operator API keys (`mirror:status`, `mirror:rebuild`).
+
+### File layout
+
+| Item | Rule |
+|------|------|
+| Path | `<collection>.xlsx` at the mirror mount root; nested collection names use subfolders (e.g. `events/2026/signups.xlsx`). |
+| Main sheet | Named like the collection (flat names) or a safe worksheet title for nested names. |
+| Columns | `id`, schema fields in definition order, then `createdAt` and `updatedAt` (UTC ISO 8601). |
+| Rows | Newest first by `createdAt`, then `id`. |
+| Long text | Values longer than `maxCellLength` are truncated with a `…[truncated]` suffix; the worker logs a count, never the value. |
+
+### Arrays
+
+Array fields get **item sheets** (one row per element) and optional **element sheets** for object arrays. The main sheet holds `TEXTJOIN` and `COUNTIF` summary columns that point at those sheets. If someone sorts an item sheet in Drive, the summary formulas can point at the wrong rows until the next regeneration — open the regenerated `.xlsx` rather than relying on a manually sorted sheet.
+
+### Safety
+
+- Formula-like text (leading `=`, `+`, `-`, `@`) is stored as **plain text**, not as a live formula.
+- Illegal XML characters are stripped before write.
+- **CSV caution:** if staff export the mirror folder to CSV and reopen it in a spreadsheet, formula-like strings may be evaluated. Prefer opening the `.xlsx` directly.
+
+### Writes and versions
+
+The worker always **PUT**s the same file path, so share links and file identity stay stable. Every PUT creates a new OX version. Unchanged content (same hash and ETag) skips the upload.
+
+### Timing and health
+
+Debounced uploads share one worker per process. **Reconciliation** runs on worker boot and every `reconcileMinutes`. Drive outages use exponential backoff on mirror passes; **`/ready` still follows MongoDB only** — a stuck mirror does not flip readiness.
+
+### Operator API
+
+Bearer API keys with explicit grants (no wildcards):
+
+| Route | Grant | Success |
+|-------|-------|---------|
+| `GET /mirror/status` | `mirror:status` | `200` — per-collection `lastMirroredAt`, lag, pending writes, failures, `lastError`, `nextAttemptAt`, external change counters (no record values). |
+| `POST /mirror` | `mirror:rebuild` | `202` — force regeneration; optional `?collection=` for one collection. |
+
+These routes are available on **every role** that runs with a mirror block (`api`, `worker`, `all`). Documented in OpenAPI when `server.docs: true`.
+
 ## Security model
 
 - **Use a dedicated Drive account for the API.** A WebDAV app password unlocks that account's whole Drive, so the API should run as its own account. People share only the folders it needs into that account. Sensitive material never lives in it.
@@ -256,13 +318,32 @@ pnpm build                    # compile to dist/
 pnpm stack:down               # stop the stack and discard its data
 ```
 
+
+### Roles
+
+One container image runs as **`ROLE=api`**, **`ROLE=worker`** or **`ROLE=all`** (default `all`). Only MongoDB and the Drive WebDAV endpoint are required — no Kong or Keycloak in the container itself.
+
+| Role | Serves | Mirror worker |
+|------|--------|----------------|
+| `api` | `/v1/*`, operator mirror routes | Marks collections dirty only |
+| `worker` | `/health`, `/ready`, operator mirror routes (no `/v1`) | Writes `.xlsx` files |
+| `all` | Everything in one process | API + worker together |
+
+```sh
+docker run --rm -e ROLE=api -e CONFIG_FILE=/config/config.yaml -e MONGO_URI=… -e WEBDAV_URL=… your-image:tag
+docker run --rm -e ROLE=worker -e CONFIG_FILE=/config/config.yaml -e MONGO_URI=… -e WEBDAV_URL=… your-image:tag
+docker run --rm -e ROLE=all … your-image:tag   # default when ROLE is unset
+```
+
+Use **two containers** when you want the API behind a gateway while the worker keeps writing mirrors, or a single `all` container for small deployments.
+
 - Tests never touch a real Drive; they run against the local WebDAV server from the Compose stack.
 - Fixtures hold synthetic data only.
 
 ## Roadmap
 
 1. **Foundation** — service skeleton, config loading, WebDAV storage adapter, MongoDB, health check, CI, local dev stack.
-2. **Collections** — JSON CRUD with schema validation, access policies (anonymous / API key), `.xlsx` mirror worker, reference gateway config with rate limits.
+2. **Collections** — JSON CRUD with schema validation, access policies (anonymous / API key), `.xlsx` mirror worker, reference gateway config with rate limits. *(Mirror and roles: done in Phase 3.)*
 3. **Read-only content** — sheets as JSON, file listing and download, `.docx` → Markdown, caching keyed on ETags.
 4. **OIDC and erasure** — validate tokens from an OIDC provider such as Keycloak; role-based access per collection; a GDPR erasure endpoint.
 5. **Object storage** — an S3-compatible API for larger files (evaluate an `rclone serve s3` sidecar against a native subset).

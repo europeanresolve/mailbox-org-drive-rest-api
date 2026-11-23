@@ -110,3 +110,7 @@ apiKeys:
   - name: website-backend
     hash: "0000000000000000000000000000000000000000000000000000000000000000"
     grants: ["contact:list", "contact:get", "contact:delete"]
+  # Operator mirror access (GET /mirror/status, POST /mirror) — separate from collection grants.
+  - name: ops-mirror
+    hash: "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    grants: ["mirror:status", "mirror:rebuild"]

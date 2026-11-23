@@ -399,6 +399,8 @@ describe("server.docs through start()", () => {
 			expect(Object.keys(doc.paths)).toEqual([
 				"/health",
 				"/ready",
+				"/mirror/status",
+				"/mirror",
 				"/v1/contact",
 			]);
 			expect((await on.fetch("/docs")).status).toBe(200);
