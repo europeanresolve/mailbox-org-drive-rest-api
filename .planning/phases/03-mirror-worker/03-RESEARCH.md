@@ -760,7 +760,7 @@ No collision possible between the operator route prefix and collection names.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Config shape for debounce timing**
    - What we know: D-15 says `config.yaml` (not env), 15s default, 3min max wait; `mirror.debounce.defaultMs` and `mirror.debounce.maxWaitMs` are reasonable names

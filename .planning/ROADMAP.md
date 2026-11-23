@@ -80,7 +80,17 @@ Plans (listed in wave order):
   3. With two instances running, a two-instance integration test shows only one writes the mirror at a time; each write is atomic as far as the spike showed Drive allows (temp upload then move, or the chosen fallback) and orphan temp files are cleaned up; and an unchanged collection is not re-uploaded
   4. After a crash between a record write and its mirror update, the mirror catches up automatically through the boot-time and periodic reconciler, with no manual step
   5. Operator with an API key can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB, and Deployer can run the single container image as role `api`, `worker` or `all` needing only MongoDB (no Kong or Keycloak)
-**Plans**: TBD
+**Plans:** 0/8 plans
+
+Plans (listed in wave order):
+- [ ] 03-01-PLAN.md — Tracer: exceljs, mirror config, dirty mark, direct PUT mirror for one collection, ROLE (wave 1)
+- [ ] 03-02-PLAN.md — Main sheet columns, formula/XML guards, dates, content hash (wave 2)
+- [ ] 03-04-PLAN.md — Mongo lease, fencing, hash skip, external-change overwrite, two-instance test (wave 2)
+- [ ] 03-06-PLAN.md — Nested collection names, routes, grants, mirror folders, unsafe property check (wave 2)
+- [ ] 03-03-PLAN.md — Array sheets, TEXTJOIN/COUNTIF summary formulas, sheet naming (wave 3)
+- [ ] 03-05-PLAN.md — Debounce, max wait, boot and periodic reconciliation (wave 3)
+- [ ] 03-07-PLAN.md — GET /mirror/status and POST /mirror operator routes (wave 4)
+- [ ] 03-08-PLAN.md — ROLE integration test, mirror canary, OpenAPI, README (wave 5)
 
 ### Phase 4: Read-only Content
 **Goal**: API consumers read Drive-edited spreadsheets, Word documents and files as fast, cached JSON and Markdown, while staff keep working in Drive.
@@ -104,5 +114,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundations, OX Spike and Storage Layer | 12/12 | In Progress | - |
 | 2. Collections, Access Policy and Anonymous Hardening | 8/8 | Complete    | 2026-11-22 |
-| 3. Mirror Worker | 0/TBD | Not started | - |
+| 3. Mirror Worker | 0/8 | Not started | - |
 | 4. Read-only Content | 0/TBD | Not started | - |
