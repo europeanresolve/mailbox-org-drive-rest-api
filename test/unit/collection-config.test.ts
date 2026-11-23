@@ -342,7 +342,7 @@ describe("nested collection names (03-06)", () => {
 				error.issues.some(
 					(i) =>
 						i.code === "schema.additionalProperties" &&
-						i.at.startsWith("/collections/"),
+						(i.at?.startsWith("/collections/") ?? false),
 				),
 			).toBe(true);
 			expect(JSON.stringify(error.issues)).not.toContain(name);

@@ -377,6 +377,42 @@ describe("GET /docs/json", () => {
 	});
 });
 
+const NESTED_SIGNUPS_SCHEMA = {
+	type: "object",
+	additionalProperties: false,
+	properties: { email: { type: "string", maxLength: 254 } },
+};
+
+describe("nested collection OpenAPI names (03-06)", () => {
+	const nestedCollections = {
+		events: {
+			schema: NESTED_SIGNUPS_SCHEMA,
+			operations: { create: "anonymous", get: "apiKey" },
+		},
+		"events/2026/signups": {
+			schema: NESTED_SIGNUPS_SCHEMA,
+			operations: { create: "anonymous", get: "apiKey", list: "apiKey" },
+		},
+	};
+
+	it("lists nested paths and encodes slash in component and operationId keys", async () => {
+		const { doc } = await documentOf({ docs: true }, nestedCollections);
+		expect(doc.paths["/v1/events/2026/signups"]?.post).toBeDefined();
+		expect(doc.paths["/v1/events/2026/signups/{id}"]?.get).toBeDefined();
+		const components = doc.components.schemas;
+		expect(components["events_2026_signups.input"]).toBeDefined();
+		expect(components["events_2026_signups.record"]).toBeDefined();
+		expect(components["events_2026_signups.page"]).toBeDefined();
+		expect(
+			doc.paths["/v1/events/2026/signups"]?.post?.operationId,
+		).toBe("events_2026_signups.create");
+		const keyPattern = /^[a-zA-Z0-9._-]+$/;
+		for (const name of Object.keys(components)) {
+			expect(name, name).toMatch(keyPattern);
+		}
+	});
+});
+
 describe("GET /docs", () => {
 	it("serves the UI as text/html", async () => {
 		const app = docsApp({ docs: true });
