@@ -4,16 +4,16 @@ milestone: v1.0
 current_phase: 03
 current_phase_name: Mirror Worker
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-11-23T05:28:00.000Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-11-23T05:56:00.000Z"
 last_activity: 2026-11-23
-last_activity_desc: Completed 03-04 lease and skip plan
-state_head: d3dad4398158e2959ac26a483191dc50963978c5
+last_activity_desc: Completed 03-05 debounce reconcile backoff plan
+state_head: 24386abb4e9f1294fd5354a74ee3ba3ebd0f63f7
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 28
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-11-21)
 ## Current Position
 
 Phase: 03 (Mirror Worker) — EXECUTING
-Plan: 4 of 8
+Plan: 5 of 8
 Status: Ready for next plan
-Last activity: 2026-11-23 — Completed 03-04 lease and skip plan
+Last activity: 2026-11-23 — Completed 03-05 debounce reconcile backoff plan
 
-Progress: [████░░░░░░] 38%
+Progress: [█████░░░░░] 44%
 
 ## Performance Metrics
 
@@ -79,6 +79,7 @@ Progress: [████░░░░░░] 38%
 | Phase 03 P01 | 7min | 3 tasks | 27 files |
 | Phase 03 P02 | 35min | 2 tasks | 5 files |
 | Phase 03 P03 | 4min | 2 tasks | 6 files |
+| Phase 03 P05 | 23min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,7 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-08: OpenAPI paths and components are written from config by transformObject and swagger hides every route; /health and /ready get fixed definitions because the onRoute hook misses routes registered before the plugin loads
 - [Phase 02]: 02-08: <name>.record extends the input schema's properties and required instead of allOf, so a closed input schema stays satisfiable; error statuses listed per operation as the code can produce them
 - [Phase 03]: 03-01: D-05 mirror config option A; exceljs only in workbook.ts; direct PUT tracer
+- [Phase 03]: 03-05: isDue drives debounce, max-wait, reconcile and backoff; non-xlsx mount bytes bypass hash/etag skip
 - [Phase 03]: ArrayField.position indexes the last main column before an array property
 - [Phase 03]: contentHash hashes model JSON with MIRROR_FORMAT_VERSION, not xlsx bytes
 
