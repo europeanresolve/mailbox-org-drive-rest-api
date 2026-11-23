@@ -6,8 +6,8 @@ import { StorageError } from "../storage/errors.ts";
 import type { WritableMount } from "../storage/mount-view.ts";
 import { MirrorLease } from "./lease.ts";
 import { mirrorFilePath, mirrorFolders } from "./path.ts";
-import { isDue } from "./schedule.ts";
-import type { MirrorStateStore } from "./state.ts";
+import { backoffMs, isDue } from "./schedule.ts";
+import type { MirrorErrorCode, MirrorStateStore } from "./state.ts";
 import type { MirrorTimings } from "./timings.ts";
 import { buildWorkbook } from "./workbook.ts";
 
@@ -20,6 +20,7 @@ export class MirrorWorker {
 	readonly #log: FastifyBaseLogger;
 	readonly #lease: MirrorLease;
 	#timer: ReturnType<typeof setInterval> | undefined;
+	#reconcileTimer: ReturnType<typeof setInterval> | undefined;
 	#running: Promise<void> | undefined;
 
 	constructor(options: {
@@ -45,12 +46,25 @@ export class MirrorWorker {
 
 	start(): void {
 		if (this.#timer !== undefined) return;
+		const names = Object.keys(this.#config.collections);
+		void this.#state.requestReconcile(names).catch((error: unknown) => {
+			this.#log.warn({ err: error }, "mirror reconcile request failed");
+		});
 		this.#timer = setInterval(() => {
 			void this.#tick();
 		}, this.#timings.pollMs);
+		this.#reconcileTimer = setInterval(() => {
+			void this.#state.requestReconcile(names).catch((error: unknown) => {
+				this.#log.warn({ err: error }, "mirror reconcile request failed");
+			});
+		}, this.#timings.reconcileMs);
 	}
 
 	async stop(): Promise<void> {
+		if (this.#reconcileTimer !== undefined) {
+			clearInterval(this.#reconcileTimer);
+			this.#reconcileTimer = undefined;
+		}
 		if (this.#timer !== undefined) {
 			clearInterval(this.#timer);
 			this.#timer = undefined;
@@ -210,20 +224,42 @@ export class MirrorWorker {
 				);
 			}
 		} catch (error) {
-			this.#log.warn(
-				{
-					collection: name,
-					token,
-					err: {
-						type: (error as Error).constructor.name,
-						kind: error instanceof StorageError ? error.kind : undefined,
-					},
-				},
-				"mirror pass failed",
-			);
+			const code = mirrorErrorCode(error);
+			const current = await this.#state.read(name);
+			const failures = current?.failures ?? 0;
+			const delay = backoffMs(failures + 1, this.#timings);
+			const nextAttemptAt = new Date(Date.now() + delay);
+			await this.#state.recordFailure(name, token, code, nextAttemptAt);
+			this.#log.warn({ collection: name, code }, "mirror pass failed");
 		} finally {
 			if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
 			await this.#lease.release(name, token);
 		}
 	}
+}
+
+const STORAGE_CODES = new Set<MirrorErrorCode>([
+	"not-found",
+	"conflict",
+	"forbidden",
+	"unauthorized",
+	"rate-limited",
+	"unavailable",
+	"too-large",
+	"insufficient-storage",
+	"read-only-mount",
+	"invalid-path",
+]);
+
+function mirrorErrorCode(error: unknown): MirrorErrorCode {
+	if (error instanceof StorageError) {
+		if (STORAGE_CODES.has(error.kind as MirrorErrorCode)) {
+			return error.kind as MirrorErrorCode;
+		}
+		return "internal";
+	}
+	if (error instanceof Error && error.message.includes("workbook")) {
+		return "workbook";
+	}
+	return "internal";
 }

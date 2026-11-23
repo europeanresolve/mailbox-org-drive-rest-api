@@ -89,28 +89,32 @@ describe("mirror reconcile and failure recovery", () => {
 		const client = new MongoClient(mongoUri);
 		const db = client.db();
 		const now = new Date();
-		await db.collection("records_contact").insertMany([
-			{
-				_id: "r1",
-				_v: 1,
-				createdAt: now,
-				updatedAt: now,
-				data: { email: "a@example.invalid", name: "A", age: 1 },
-			},
-			{
-				_id: "r2",
-				_v: 1,
-				createdAt: now,
-				updatedAt: now,
-				data: { email: "b@example.invalid", name: "B", age: 2 },
-			},
-		]);
-		await db.collection("mirror_state").insertOne({
-			_id: "contact",
-			dirtySeq: 0,
-			mirroredSeq: 0,
-			dueAt: now,
-		});
+		await db
+			.collection<Record<string, unknown> & { _id: string }>("records_contact")
+			.insertMany([
+				{
+					_id: "r1",
+					_v: 1,
+					createdAt: now,
+					updatedAt: now,
+					data: { email: "a@example.invalid", name: "A", age: 1 },
+				},
+				{
+					_id: "r2",
+					_v: 1,
+					createdAt: now,
+					updatedAt: now,
+					data: { email: "b@example.invalid", name: "B", age: 2 },
+				},
+			]);
+		await db
+			.collection<Record<string, unknown> & { _id: string }>("mirror_state")
+			.insertOne({
+				_id: "contact",
+				dirtySeq: 0,
+				mirroredSeq: 0,
+				dueAt: now,
+			});
 		await client.close();
 
 		const app = await collectionsApp({
@@ -148,34 +152,39 @@ describe("mirror reconcile and failure recovery", () => {
 			collections: contactCollection,
 		});
 		try {
-			const res = await app.fetch("/v1/contact", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({
-					email: "one@example.invalid",
-					name: "One",
-					age: 1,
-				}),
-			});
-			expect(res.status).toBe(201);
+			for (const [email, name] of [
+				["one@example.invalid", "One"],
+				["two@example.invalid", "Two"],
+			] as const) {
+				const res = await app.fetch("/v1/contact", {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ email, name, age: 1 }),
+				});
+				expect(res.status).toBe(201);
+			}
 			await waitUntil(
 				async () => {
 					const bytes = await fetchMirror(app.mirrorFolder, "contact.xlsx");
 					if (bytes === null) return false;
-					return (await readRows(bytes)).rows.length - 1 >= 1;
+					return (await readRows(bytes)).rows.length - 1 >= 2;
 				},
 				8000,
 				50,
 			);
 
 			const now = new Date();
-			await app.db.collection("records_contact").insertOne({
-				_id: `r-${randomBytes(4).toString("hex")}`,
-				_v: 1,
-				createdAt: now,
-				updatedAt: now,
-				data: { email: "three@example.invalid", name: "Three", age: 3 },
-			});
+			await app.db
+				.collection<Record<string, unknown> & { _id: string }>(
+					"records_contact",
+				)
+				.insertOne({
+					_id: `r-${randomBytes(4).toString("hex")}`,
+					_v: 1,
+					createdAt: now,
+					updatedAt: now,
+					data: { email: "three@example.invalid", name: "Three", age: 3 },
+				});
 
 			await waitUntil(
 				async () => {
@@ -324,7 +333,7 @@ describe("mirror reconcile and failure recovery", () => {
 			await waitUntil(
 				async () => {
 					const s = await db
-						.collection<{ nextAttemptAt?: Date }>("mirror_state")
+						.collection<{ _id: string; nextAttemptAt?: Date }>("mirror_state")
 						.findOne({ _id: "contact" });
 					return (
 						s?.nextAttemptAt !== undefined &&
@@ -346,6 +355,7 @@ describe("mirror reconcile and failure recovery", () => {
 				async () => {
 					const s = await db
 						.collection<{
+							_id: string;
 							failures?: number;
 							lastError?: MirrorErrorCode | null;
 						}>("mirror_state")

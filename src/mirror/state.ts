@@ -57,6 +57,32 @@ export class MirrorStateStore {
 		);
 	}
 
+	async requestReconcile(names: readonly string[]): Promise<void> {
+		for (const name of names) {
+			await this.#collection.updateOne(
+				{ _id: name },
+				{ $set: { reconcileRequested: true } },
+				{ upsert: true },
+			);
+		}
+	}
+
+	async recordFailure(
+		name: string,
+		token: number,
+		code: MirrorErrorCode,
+		nextAttemptAt: Date,
+	): Promise<boolean> {
+		const result = await this.#collection.updateOne(
+			{ _id: name, fence: token },
+			{
+				$inc: { failures: 1 },
+				$set: { lastError: code, nextAttemptAt },
+			},
+		);
+		return result.matchedCount === 1;
+	}
+
 	async list(names: readonly string[]): Promise<MirrorState[]> {
 		if (names.length === 0) return [];
 		return this.#collection.find({ _id: { $in: [...names] } }).toArray();
