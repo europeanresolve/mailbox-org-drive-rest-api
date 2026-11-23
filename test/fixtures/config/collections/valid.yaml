@@ -10,6 +10,8 @@ mounts:
   forms:
     path: /Userstore/Example Service/Forms
     mode: read-write
+mirror:
+  mount: forms
 collections:
   contact:
     schema:

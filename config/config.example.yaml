@@ -40,6 +40,14 @@ mounts:
     path: /Userstore/Example Service/content
     mode: read
 
+# Mirror spreadsheets (required when any collection is defined). Use a dedicated
+# read-write mount; staff open `<collection>.xlsx` files there.
+mirror:
+  mount: forms
+  # debounceSeconds: 15      # wait after the last write before uploading (default 15)
+  # maxWaitSeconds: 180      # longest debounce stretch before a forced upload (default 180)
+  # reconcileMinutes: 15     # how often to scan for drift (default 15)
+  # maxCellLength: 32767       # longest string stored in a cell (default 32767)
 # A collection is a set of JSON records served at /v1/<name> (names follow the same
 # rules as mounts). Everything here is synthetic: replace it with your own.
 collections:

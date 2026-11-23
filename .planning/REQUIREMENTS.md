@@ -56,8 +56,8 @@ Milestone **v1.0**: Foundation + Collections (website forms, shipped first) + Re
 
 - [ ] **MIRR-01**: Staff see each collection mirrored to its own `.xlsx` in Drive, regenerated (debounced) after record changes
 - [ ] **MIRR-02**: Only one writer updates a mirror at a time, even with several replicas (Mongo lease with fencing), verified by a two-instance test
-- [ ] **MIRR-03**: Mirror writes are atomic as far as the spike shows Drive allows (temp upload then move, or the fallback it chooses) and orphan temp files are cleaned up
-- [ ] **MIRR-04**: Mirror columns follow the schema or a config mapping, in a stable order
+- [ ] **MIRR-03**: Mirror writes use a direct PUT over the final file, per the spike (P-17); no temp files are created
+- [ ] **MIRR-04**: Mirror columns follow the schema, in a stable order
 - [ ] **MIRR-05**: Attacker-supplied values can never become formulas or links in the mirror (explicit cell types, formula-prefix guard, illegal XML characters stripped, cell length capped)
 - [ ] **MIRR-06**: The mirror is not re-uploaded when its content has not changed (deterministic workbook plus content hash)
 - [ ] **MIRR-07**: A missed mirror update (crash between write and mirror) is recovered automatically by a reconciler on boot and periodically
@@ -195,3 +195,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 *Requirements defined: 2026-11-21*
 *Last updated: 2026-11-21 after roadmap creation (traceability filled; coverage corrected from 48 to 50)*
 *Last updated: 2026-11-22 after Phase 2 plan 02-03: SEC-07 (CAPTCHA siteverify) dropped per D-07, moved to Out of Scope; coverage 50 to 49*
+*Last updated: 2026-11-23 after Phase 3 plan 03-01: MIRR-03/MIRR-04 reworded for direct PUT and schema column order (D-02, D-08)*

@@ -2,9 +2,14 @@ import type { FastifyInstance } from "fastify";
 import pino, { type DestinationStream } from "pino";
 import { buildApp } from "./app.ts";
 import { ensureIndexes, scheduleIndexSetup } from "./collections/indexes.ts";
+import { RecordStore } from "./collections/store.ts";
 import { ConfigError, loadConfig } from "./config/load.ts";
 import { createMongo } from "./db/mongo.ts";
+import { MirrorStateStore } from "./mirror/state.ts";
+import { type MirrorTimings, resolveTimings } from "./mirror/timings.ts";
+import { MirrorWorker } from "./mirror/worker.ts";
 import { createDriveHealth } from "./storage/drive-health.ts";
+import { openMount, type WritableMount } from "./storage/mount-view.ts";
 import { buildMounts } from "./storage/mounts.ts";
 import { WebDavAdapter } from "./storage/webdav-adapter.ts";
 
@@ -22,10 +27,13 @@ export async function start(
 		logStream?: DestinationStream;
 		/** Test-only: shortens the adapter's retry waits. Not a config key. */
 		adapterTimings?: AdapterTimings;
+		/** Test-only: shortens mirror worker polling and debounce. Not a config key. */
+		mirrorTimings?: Partial<MirrorTimings>;
 	} = {},
 ): Promise<{ app: FastifyInstance; close(): Promise<void> }> {
 	const config = loadConfig(options.env ?? process.env);
 	const mongo = createMongo(config.mongo.uri);
+	let worker: MirrorWorker | undefined;
 	try {
 		const adapter = new WebDavAdapter({
 			...config.storage.webdav,
@@ -40,6 +48,12 @@ export async function start(
 		if (firstMount === undefined) throw new ConfigError([]);
 
 		const db = mongo.client.db();
+		const timings =
+			config.mirror === undefined
+				? undefined
+				: resolveTimings(config.mirror, options.mirrorTimings);
+		const mirrorState =
+			timings === undefined ? undefined : new MirrorStateStore(db, timings);
 		// The closure lets the app be built before driveHealth exists.
 		let driveHealth: ReturnType<typeof createDriveHealth> | undefined;
 		const app = buildApp({
@@ -51,7 +65,15 @@ export async function start(
 				mongoPing: mongo.ping,
 				driveState: () => driveHealth?.state() ?? "unknown",
 			},
-			collections: { config, db },
+			...(config.role === "worker"
+				? {}
+				: {
+						collections: {
+							config,
+							db,
+							...(mirrorState === undefined ? {} : { mirrorState }),
+						},
+					}),
 			trustProxy: config.server.trustProxy,
 			docs: config.server.docs,
 		});
@@ -61,11 +83,38 @@ export async function start(
 		});
 
 		await app.listen({ host: "0.0.0.0", port: config.server.port });
+
+		if (
+			config.mirror !== undefined &&
+			timings !== undefined &&
+			(config.role === "worker" || config.role === "all")
+		) {
+			const mount = openMount(mounts, adapter, config.mirror.mount);
+			if (mount.mode !== "read-write") {
+				throw new ConfigError([
+					{
+						code: "mirror.MOUNT_NOT_WRITABLE",
+						at: "/mirror/mount",
+					},
+				]);
+			}
+			worker = new MirrorWorker({
+				config,
+				mount: mount as WritableMount,
+				state: mirrorState as MirrorStateStore,
+				store: new RecordStore(db),
+				timings,
+				log: app.log,
+			});
+			worker.start();
+		}
+
 		// Names and modes only: real Drive paths never reach a log (D-19).
 		app.log.info(
 			{
 				port: config.server.port,
 				logLevel: config.server.logLevel,
+				role: config.role,
 				mounts: Object.entries(config.mounts).map(([name, { mode }]) => ({
 					name,
 					mode,
@@ -85,6 +134,9 @@ export async function start(
 			app,
 			close: async () => {
 				indexSetup.stop();
+				if (worker !== undefined) {
+					await worker.stop();
+				}
 				await app.close();
 				await mongo.close();
 			},

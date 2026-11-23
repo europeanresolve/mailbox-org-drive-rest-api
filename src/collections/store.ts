@@ -72,6 +72,14 @@ export class RecordStore {
 		);
 	}
 
+	/** Full collection in stable mirror order (D-12). */
+	async allSorted(name: string): Promise<RecordDocument[]> {
+		return this.#records(name)
+			.find({})
+			.sort({ createdAt: 1, _id: 1 })
+			.toArray();
+	}
+
 	/** Hard delete (D-13). True when a document was removed. */
 	async remove(name: string, id: string): Promise<boolean> {
 		const result = await this.#records(name).deleteOne({ _id: id });

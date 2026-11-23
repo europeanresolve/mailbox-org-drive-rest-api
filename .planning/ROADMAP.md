@@ -75,9 +75,9 @@ Plans (listed in wave order):
 **Depends on**: Phase 1, Phase 2
 **Requirements**: MIRR-01, MIRR-02, MIRR-03, MIRR-04, MIRR-05, MIRR-06, MIRR-07, MIRR-08, FND-05
 **Success Criteria** (what must be TRUE):
-  1. After records are created, changed or deleted, each collection's own `.xlsx` appears and is regenerated in Drive after a debounce window (a burst of writes yields far fewer uploads than writes), with columns following the schema or a config mapping in a stable order
+  1. After records are created, changed or deleted, each collection's own `.xlsx` appears and is regenerated in Drive after a debounce window (a burst of writes yields far fewer uploads than writes), with columns following the schema in a stable order
   2. Attacker-supplied values (leading `=`, `+`, `-`, `@`, tab, illegal XML characters, values over the cell length cap) open in a spreadsheet as plain, typed text and never as formulas or links
-  3. With two instances running, a two-instance integration test shows only one writes the mirror at a time; each write is atomic as far as the spike showed Drive allows (temp upload then move, or the chosen fallback) and orphan temp files are cleaned up; and an unchanged collection is not re-uploaded
+  3. With two instances running, a two-instance integration test shows only one writes the mirror at a time; each write is a direct PUT over the final file per the spike, with no temp files; and an unchanged collection is not re-uploaded
   4. After a crash between a record write and its mirror update, the mirror catches up automatically through the boot-time and periodic reconciler, with no manual step
   5. Operator with an API key can read mirror status (last mirrored, lag, last error) and trigger a full rebuild from MongoDB, and Deployer can run the single container image as role `api`, `worker` or `all` needing only MongoDB (no Kong or Keycloak)
 **Plans:** 0/8 plans

@@ -11,6 +11,7 @@ import {
 } from "../auth/api-keys.ts";
 import type { Config } from "../config/schema.ts";
 import { PROBLEM_JSON, problem } from "../http/logging.ts";
+import type { MirrorStateStore } from "../mirror/state.ts";
 import {
 	anonymousRateLimit,
 	honeypotFilled,
@@ -102,11 +103,30 @@ function sendCreated(reply: FastifyReply, response: StoredResponse) {
  * One encapsulated plugin per collection at /v1/{name} (D-15). An operation with
  * no policy is never registered, so it answers the normal 404 (D-03).
  */
+async function markDirtyAfterWrite(
+	mirrorState: MirrorStateStore | undefined,
+	name: string,
+	log: FastifyInstance["log"],
+): Promise<void> {
+	if (mirrorState === undefined) return;
+	await mirrorState.markDirty(name).catch((error: unknown) => {
+		log.warn(
+			{ collection: name, err: { type: (error as Error).constructor.name } },
+			"mirror mark dirty failed",
+		);
+	});
+}
+
 export function registerCollections(
 	app: FastifyInstance,
-	options: { config: Config; db: Db; keyStore?: KeyStore },
+	options: {
+		config: Config;
+		db: Db;
+		keyStore?: KeyStore;
+		mirrorState?: MirrorStateStore;
+	},
 ): void {
-	const { config, db } = options;
+	const { config, db, mirrorState } = options;
 	const keyStore = options.keyStore ?? new ConfigKeyStore(config.apiKeys);
 	const validators = compileCollections(config.collections);
 	const store = new RecordStore(db);
@@ -235,6 +255,7 @@ export function registerCollections(
 							if (key !== undefined) {
 								await idempotency.complete(name, key, response);
 							}
+							await markDirtyAfterWrite(mirrorState, name, scope.log);
 							return sendCreated(reply, response);
 						},
 					);
@@ -312,6 +333,7 @@ export function registerCollections(
 								const exists = await store.findById(name, id);
 								return reject(reply, exists === null ? 404 : 412);
 							}
+							await markDirtyAfterWrite(mirrorState, name, scope.log);
 							reply.header("etag", etag(updated._v));
 							return toRecord(updated);
 						},
@@ -361,6 +383,7 @@ export function registerCollections(
 									current._v,
 								]);
 								if (updated !== null) {
+									await markDirtyAfterWrite(mirrorState, name, scope.log);
 									reply.header("etag", etag(updated._v));
 									return toRecord(updated);
 								}
@@ -381,6 +404,7 @@ export function registerCollections(
 							}
 							// The stored create response holds the deleted data (D-13).
 							await idempotency.removeForRecord(request.params.id);
+							await markDirtyAfterWrite(mirrorState, name, scope.log);
 							return reply.status(204).send();
 						},
 					);

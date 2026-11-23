@@ -29,6 +29,9 @@ export const MAX_BODY_LIMIT = 1048576;
 export const COLLECTION_POLICIES = ["anonymous", "apiKey"] as const;
 export type CollectionPolicy = (typeof COLLECTION_POLICIES)[number];
 
+export const ROLES = ["api", "worker", "all"] as const;
+export type Role = (typeof ROLES)[number];
+
 const operationsSchema = Type.Object(
 	Object.fromEntries(
 		COLLECTION_OPERATIONS.map((op) => [
@@ -139,6 +142,26 @@ export const ConfigSchema = Type.Object(
 				),
 			),
 		),
+		mirror: Type.Optional(
+			Type.Object(
+				{
+					mount: Type.String({ pattern: MOUNT_NAME_PATTERN }),
+					debounceSeconds: Type.Optional(
+						Type.Integer({ minimum: 1, maximum: 3600 }),
+					),
+					maxWaitSeconds: Type.Optional(
+						Type.Integer({ minimum: 1, maximum: 86400 }),
+					),
+					reconcileMinutes: Type.Optional(
+						Type.Integer({ minimum: 1, maximum: 1440 }),
+					),
+					maxCellLength: Type.Optional(
+						Type.Integer({ minimum: 100, maximum: 32767 }),
+					),
+				},
+				{ additionalProperties: false },
+			),
+		),
 	},
 	{ additionalProperties: false },
 );
@@ -194,4 +217,12 @@ export type Config = {
 		readonly hash: string;
 		readonly grants: readonly string[];
 	}[];
+	readonly role: Role;
+	readonly mirror?: {
+		readonly mount: string;
+		readonly debounceSeconds: number;
+		readonly maxWaitSeconds: number;
+		readonly reconcileMinutes: number;
+		readonly maxCellLength: number;
+	};
 };

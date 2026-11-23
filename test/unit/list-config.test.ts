@@ -57,6 +57,7 @@ function issuesFor(indexes: unknown): ConfigIssue[] {
 					},
 				},
 				mounts: { forms: { path: "/Forms", mode: "read-write" } },
+				mirror: { mount: "forms" },
 				collections: {
 					ticket: {
 						schema: SCHEMA,

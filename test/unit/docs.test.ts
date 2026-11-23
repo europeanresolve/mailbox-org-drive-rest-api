@@ -75,6 +75,7 @@ function writeConfig(
 					},
 				},
 				mounts: { live: { path: "/live", mode: "read-write" } },
+				mirror: { mount: "live" },
 				...(collections ? { collections } : {}),
 			}),
 		);

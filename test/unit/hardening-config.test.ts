@@ -36,6 +36,7 @@ function load(
 					},
 				},
 				mounts: { live: { path: "/live", mode: "read-write" } },
+				mirror: { mount: "live" },
 				collections: {
 					contact: {
 						schema: SCHEMA,

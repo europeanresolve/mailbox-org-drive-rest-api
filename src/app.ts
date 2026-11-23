@@ -6,13 +6,14 @@ import type { Config } from "./config/schema.ts";
 import { registerDocs } from "./http/docs.ts";
 import { type ReadinessChecks, registerHealthRoutes } from "./http/health.ts";
 import { loggerOptions, registerLogging } from "./http/logging.ts";
+import type { MirrorStateStore } from "./mirror/state.ts";
 
 export interface AppOptions {
 	logger?: { level?: string; stream?: DestinationStream };
 	/** Without checks only /health is registered. */
 	checks?: ReadinessChecks;
 	/** Without it no collection routes are registered. */
-	collections?: { config: Config; db: Db };
+	collections?: { config: Config; db: Db; mirrorState?: MirrorStateStore };
 	/**
 	 * Proxy IPs or CIDRs whose X-Forwarded-For is believed. Empty or absent means the
 	 * header is never read and the socket address is the client (D-10).

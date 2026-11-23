@@ -19,6 +19,8 @@ import {
 	DEFAULT_BODY_LIMIT,
 	LOG_LEVELS,
 	MOUNT_NAME_PATTERN,
+	ROLES,
+	type Role,
 } from "./schema.ts";
 
 export type ConfigIssue = {
@@ -289,6 +291,54 @@ function trustProxyIssues(document: unknown): ConfigIssue[] {
 	return issues;
 }
 
+function mirrorIssues(document: unknown, failed: Set<string>): ConfigIssue[] {
+	if (!isRecord(document)) return [];
+	const collections = document.collections;
+	const hasCollections =
+		isRecord(collections) && Object.keys(collections).length > 0;
+	const mirror = document.mirror;
+	if (hasCollections && !isRecord(mirror)) {
+		return [{ code: "mirror.REQUIRED", at: "/mirror" }];
+	}
+	if (!isRecord(mirror)) return [];
+	const issues: ConfigIssue[] = [];
+	const { mount, debounceSeconds, maxWaitSeconds } = mirror;
+	const mounts = isRecord(document.mounts) ? document.mounts : {};
+	if (
+		typeof mount !== "string" ||
+		failed.has("/mirror/mount") ||
+		!MOUNT_NAME.test(mount)
+	) {
+		return issues;
+	}
+	if (!isRecord(mounts[mount])) {
+		issues.push({ code: "mirror.MOUNT_UNKNOWN", at: "/mirror/mount" });
+	} else {
+		const entry = mounts[mount] as { mode?: string };
+		if (entry.mode === "read") {
+			issues.push({
+				code: "mirror.MOUNT_NOT_WRITABLE",
+				at: "/mirror/mount",
+			});
+		}
+	}
+	const resolvedDebounce =
+		typeof debounceSeconds === "number" ? debounceSeconds : 15;
+	const resolvedMaxWait =
+		typeof maxWaitSeconds === "number" ? maxWaitSeconds : 180;
+	if (
+		resolvedMaxWait < resolvedDebounce &&
+		!failed.has("/mirror/maxWaitSeconds") &&
+		!failed.has("/mirror/debounceSeconds")
+	) {
+		issues.push({
+			code: "mirror.MAX_WAIT_BELOW_DEBOUNCE",
+			at: "/mirror/maxWaitSeconds",
+		});
+	}
+	return issues;
+}
+
 function mountIssues(document: unknown, failed: Set<string>): ConfigIssue[] {
 	if (!isRecord(document) || !isRecord(document.mounts)) return [];
 	const defs: Record<string, MountDef> = {};
@@ -355,10 +405,26 @@ function withCollectionDefaults(collections: unknown): Config["collections"] {
 	) as Config["collections"];
 }
 
-function withDefaults(document: Record<string, unknown>): Config {
+function mirrorDefaults(
+	raw: Record<string, unknown> | undefined,
+): Config["mirror"] | undefined {
+	if (raw === undefined) return undefined;
+	return {
+		mount: raw.mount as string,
+		debounceSeconds: (raw.debounceSeconds as number | undefined) ?? 15,
+		maxWaitSeconds: (raw.maxWaitSeconds as number | undefined) ?? 180,
+		reconcileMinutes: (raw.reconcileMinutes as number | undefined) ?? 15,
+		maxCellLength: (raw.maxCellLength as number | undefined) ?? 32767,
+	};
+}
+
+function withDefaults(document: Record<string, unknown>, role: Role): Config {
 	const server = (document.server ?? {}) as Partial<Config["server"]>;
 	const webdav = (document.storage as { webdav: Record<string, unknown> })
 		.webdav;
+	const mirror = mirrorDefaults(
+		document.mirror as Record<string, unknown> | undefined,
+	);
 	return {
 		server: {
 			port: server.port ?? 3000,
@@ -376,6 +442,8 @@ function withDefaults(document: Record<string, unknown>): Config {
 		mounts: document.mounts as Config["mounts"],
 		collections: withCollectionDefaults(document.collections),
 		apiKeys: (document.apiKeys ?? []) as Config["apiKeys"],
+		role,
+		...(mirror === undefined ? {} : { mirror }),
 	};
 }
 
@@ -405,6 +473,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	const resolved = interpolate(doc.toJS() ?? {}, "", env, failed, envIssues);
 	const overridden = applyEnvOverrides(resolved, env, envIssues);
 
+	let role: Role = "all";
+	const rawRole = env.ROLE;
+	if (rawRole !== undefined) {
+		if (!(ROLES as readonly string[]).includes(rawRole)) {
+			envIssues.add({ code: "env.INVALID_ROLE", at: "ROLE" });
+		} else {
+			role = rawRole as Role;
+		}
+	}
+
 	// Sibling-file schemas are read before the schema stage; ones that fail are not checked twice.
 	const refs = resolveSchemaRefs(overridden, dirname(resolve(path)));
 	const document = refs.document;
@@ -415,6 +493,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 	if (urlIssue !== undefined) semantic.push(urlIssue);
 	semantic.push(...trustProxyIssues(document));
 	semantic.push(...mountIssues(document, failed));
+	semantic.push(...mirrorIssues(document, failed));
 	semantic.push(...collectionIssues(document, failed));
 	semantic.push(...apiKeyIssues(document, failed));
 
@@ -424,5 +503,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 		...inDocumentOrder(doc, semantic),
 	];
 	if (issues.length > 0) throw new ConfigError(issues);
-	return deepFreeze(withDefaults(document as Record<string, unknown>));
+	return deepFreeze(withDefaults(document as Record<string, unknown>, role));
 }

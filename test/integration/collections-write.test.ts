@@ -615,13 +615,14 @@ describe("PATCH retry on a lost version race", () => {
 					},
 				},
 				mounts: { live: { path: `/run-${runId}`, mode: "read-write" } },
+				mirror: { mount: "live" },
 				collections: {
 					contact: {
 						schema: {
 							type: "object",
 							additionalProperties: false,
 							required: ["name"],
-							properties: { name: { type: "string" } },
+							properties: { name: { type: "string", maxLength: 100 } },
 						},
 						operations: { create: "apiKey", patch: "apiKey" },
 					},
