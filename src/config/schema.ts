@@ -12,6 +12,9 @@ export const LOG_LEVELS = [
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export const MOUNT_NAME_PATTERN = "^[a-z][a-z0-9-]{0,31}$";
+/** Slash-separated collection names (D-18); mount and API key names keep MOUNT_NAME_PATTERN. */
+/** First segment matches mounts; nested segments also allow a leading digit (e.g. `2026`). */
+export const COLLECTION_NAME_PATTERN = `^[a-z][a-z0-9-]{0,31}(/[a-z0-9][a-z0-9-]{0,31})*$`;
 
 export const COLLECTION_OPERATIONS = [
 	"create",
@@ -95,7 +98,7 @@ export const ConfigSchema = Type.Object(
 		// The schema is the deployer's JSON Schema; strict Ajv checks it in the semantic stage.
 		collections: Type.Optional(
 			Type.Record(
-				Type.String({ pattern: MOUNT_NAME_PATTERN }),
+				Type.String({ pattern: COLLECTION_NAME_PATTERN }),
 				Type.Object(
 					{
 						schema: Type.Record(Type.String(), Type.Unknown()),

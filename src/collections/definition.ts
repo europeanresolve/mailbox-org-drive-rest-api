@@ -2,7 +2,11 @@ import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { parseDocument } from "yaml";
 import type { ConfigIssue } from "../config/load.ts";
-import { COLLECTION_OPERATIONS, MOUNT_NAME_PATTERN } from "../config/schema.ts";
+import {
+	COLLECTION_NAME_PATTERN,
+	COLLECTION_OPERATIONS,
+	MOUNT_NAME_PATTERN,
+} from "../config/schema.ts";
 import { createRecordAjv } from "./validator.ts";
 
 /** D-16 list plus `v1`: names that would shadow a fixed route or a later feature. */
@@ -25,7 +29,13 @@ const RESERVED_PROPERTIES: ReadonlySet<string> = new Set([
 	"updatedAt",
 ]);
 
-const NAME = new RegExp(MOUNT_NAME_PATTERN);
+const MOUNT_NAME = new RegExp(MOUNT_NAME_PATTERN);
+const COLLECTION_NAME = new RegExp(COLLECTION_NAME_PATTERN);
+
+function firstSegment(name: string): string {
+	const slash = name.indexOf("/");
+	return slash === -1 ? name : name.slice(0, slash);
+}
 const OPERATIONS: ReadonlySet<string> = new Set(COLLECTION_OPERATIONS);
 
 // Issues carry codes and JSON pointers only, never a config value (T-01-16).
@@ -192,6 +202,13 @@ function unsafeName(name: string): boolean {
 	);
 }
 
+const MIRROR_UNSAFE_CHARS = /[:\\/?*[\]()']/;
+
+/** Characters unsafe in an Excel sheet name or formula reference (D-23). */
+function mirrorUnsafeName(name: string): boolean {
+	return MIRROR_UNSAFE_CHARS.test(name);
+}
+
 function walk(
 	node: unknown,
 	at: string,
@@ -215,6 +232,12 @@ function walk(
 			}
 			if (unsafeName(name)) {
 				report({ code: "collection.INVALID_PROPERTY_NAME", at: propertyAt });
+			}
+			if (mirrorUnsafeName(name)) {
+				report({
+					code: "collection.MIRROR_UNSAFE_PROPERTY_NAME",
+					at: propertyAt,
+				});
 			}
 		}
 	}
@@ -422,9 +445,9 @@ export function collectionIssues(
 
 	for (const [name, entry] of Object.entries(document.collections)) {
 		// A bad name or shape was already reported by the schema stage.
-		if (!NAME.test(name) || !isRecord(entry)) continue;
+		if (!COLLECTION_NAME.test(name) || !isRecord(entry)) continue;
 		const base = `/collections${pointer(name)}`;
-		if (RESERVED_COLLECTION_NAMES.has(name)) {
+		if (RESERVED_COLLECTION_NAMES.has(firstSegment(name))) {
 			report({ code: "collection.RESERVED_NAME", at: base });
 		}
 
@@ -462,7 +485,9 @@ export function apiKeyIssues(
 	if (!isRecord(document) || !Array.isArray(document.apiKeys)) return [];
 	const collections = new Set(
 		isRecord(document.collections)
-			? Object.keys(document.collections).filter((name) => NAME.test(name))
+			? Object.keys(document.collections).filter((name) =>
+					COLLECTION_NAME.test(name),
+				)
 			: [],
 	);
 	const issues: ConfigIssue[] = [];
@@ -473,7 +498,7 @@ export function apiKeyIssues(
 		if (!isRecord(key)) continue;
 		const base = `/apiKeys${pointer(index)}`;
 
-		if (typeof key.name === "string" && NAME.test(key.name)) {
+		if (typeof key.name === "string" && MOUNT_NAME.test(key.name)) {
 			if (names.has(key.name)) {
 				issues.push({ code: "apiKey.DUPLICATE_NAME", at: `${base}/name` });
 			}
@@ -494,7 +519,7 @@ export function apiKeyIssues(
 		for (const [grantIndex, grant] of key.grants.entries()) {
 			if (typeof grant !== "string" || grant === "") continue;
 			const at = `${base}/grants${pointer(grantIndex)}`;
-			const colon = grant.indexOf(":");
+			const colon = grant.lastIndexOf(":");
 			const collection = grant.slice(0, colon);
 			const operation = grant.slice(colon + 1);
 			// Exact `collection:operation` only; a wildcard or a stray colon is malformed (D-02).
@@ -502,7 +527,7 @@ export function apiKeyIssues(
 				colon <= 0 ||
 				operation === "" ||
 				grant.includes("*") ||
-				operation.includes(":")
+				grant.slice(0, colon).includes(":")
 			) {
 				issues.push({ code: "apiKey.INVALID_GRANT", at });
 			} else if (!collections.has(collection) || !OPERATIONS.has(operation)) {

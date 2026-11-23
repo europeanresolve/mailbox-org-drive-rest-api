@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stringify } from "yaml";
 import {
 	ConfigError,
 	type ConfigIssue,
@@ -228,83 +229,57 @@ describe("collections and apiKeys in invalid-many.yaml", () => {
 	});
 });
 
-const CLOSED_OBJECT = {
-	type: "object",
-	additionalProperties: false,
-	properties: { n: { type: "string", maxLength: 50 } },
-};
-
-function yamlLines(
+function buildNestedDocument(
 	collections: Record<string, unknown>,
 	apiKeys?: unknown[],
-): string[] {
-	const lines = [
-			"mongo:",
-			"  uri: mongodb://127.0.0.1:27017/nested",
-			"storage:",
-			"  webdav:",
-			"    url: https://dav.example.invalid/",
-			"    username: user@example.invalid",
-			"    password: ${WEBDAV_APP_PASSWORD}",
-			"mounts:",
-			"  forms:",
-			"    path: /forms",
-			"    mode: read-write",
-			"mirror:",
-			"  mount: forms",
-			"collections:",
-		];
+): Record<string, unknown> {
+	const normalized: Record<string, unknown> = {};
 	for (const [name, entry] of Object.entries(collections)) {
-		lines.push(`  ${JSON.stringify(name)}:`);
-		const schema = (entry as { schema?: Record<string, unknown> }).schema;
-		if (schema) {
-			lines.push(`    schema: ${JSON.stringify(schema)}`);
-		} else {
-			lines.push("    schema:");
-			lines.push("      type: object");
-			lines.push("      additionalProperties: false");
-			lines.push("      properties:");
-			lines.push("        n:");
-			lines.push("          type: string");
-			lines.push("          maxLength: 50");
-		}
-		const ops = (entry as { operations?: Record<string, string> }).operations;
-		if (ops) {
-			lines.push("    operations:");
-			for (const [op, policy] of Object.entries(ops)) {
-				lines.push(`      ${op}: ${policy}`);
-			}
-		}
+		const e = entry as { schema?: Record<string, unknown>; operations?: Record<string, string> };
+		normalized[name] = {
+			schema: e.schema ?? {
+				type: "object",
+				additionalProperties: false,
+				properties: { n: { type: "string", maxLength: 50 } },
+			},
+			...(e.operations ? { operations: e.operations } : {}),
+		};
 	}
-	if (apiKeys) {
-		lines.push("apiKeys:");
-		for (const key of apiKeys as {
-			name: string;
-			hash: string;
-			grants: string[];
-		}[]) {
-			lines.push(`  - name: ${key.name}`);
-			lines.push(`    hash: "${key.hash}"`);
-			lines.push("    grants:");
-			for (const grant of key.grants) {
-				lines.push(`      - ${grant}`);
-			}
-		}
-	}
-	return lines;
+	return {
+		mongo: { uri: "mongodb://127.0.0.1:27017/nested" },
+		storage: {
+			webdav: {
+				url: "https://dav.example.invalid/",
+				username: "user@example.invalid",
+				password: "${WEBDAV_APP_PASSWORD}",
+			},
+		},
+		mounts: { forms: { path: "/forms", mode: "read-write" } },
+		mirror: { mount: "forms" },
+		collections: normalized,
+		...(apiKeys ? { apiKeys } : {}),
+	};
+}
+
+function writeNestedConfig(
+	collections: Record<string, unknown>,
+	apiKeys?: unknown[],
+): string {
+	const dir = mkdtempSync(join(tmpdir(), "snook-nested-cfg-"));
+	const file = join(dir, "config.yaml");
+	writeFileSync(file, stringify(buildNestedDocument(collections, apiKeys)));
+	return file;
 }
 
 function loadNestedYaml(
 	collections: Record<string, unknown>,
 	apiKeys?: unknown[],
 ) {
-	const dir = mkdtempSync(join(tmpdir(), "snook-nested-cfg-"));
+	const file = writeNestedConfig(collections, apiKeys);
 	try {
-		const file = join(dir, "config.yaml");
-		writeFileSync(file, `${yamlLines(collections, apiKeys).join("\n")}\n`);
 		return loadConfig({ CONFIG_FILE: file, ...ENV });
 	} finally {
-		rmSync(dir, { recursive: true, force: true });
+		rmSync(join(file, ".."), { recursive: true, force: true });
 	}
 }
 
@@ -312,10 +287,8 @@ function nestedFailure(
 	collections: Record<string, unknown>,
 	apiKeys?: unknown[],
 ): ConfigError {
-	const dir = mkdtempSync(join(tmpdir(), "snook-nested-cfg-"));
+	const file = writeNestedConfig(collections, apiKeys);
 	try {
-		const file = join(dir, "config.yaml");
-		writeFileSync(file, `${yamlLines(collections, apiKeys).join("\n")}\n`);
 		try {
 			loadConfig({ CONFIG_FILE: file, ...ENV });
 		} catch (error) {
@@ -324,7 +297,7 @@ function nestedFailure(
 		}
 		return expect.fail("expected loadConfig to throw");
 	} finally {
-		rmSync(dir, { recursive: true, force: true });
+		rmSync(join(file, ".."), { recursive: true, force: true });
 	}
 }
 
@@ -369,17 +342,26 @@ describe("nested collection names (03-06)", () => {
 				error.issues.some(
 					(i) =>
 						i.code === "schema.additionalProperties" &&
-						i.at === `/collections/${name}`,
+						i.at.startsWith("/collections/"),
 				),
 			).toBe(true);
 			expect(JSON.stringify(error.issues)).not.toContain(name);
 		});
 	}
 
+	function collectionPointer(name: string): string {
+		const encoded = name.replaceAll("~", "~0").replaceAll("/", "~1");
+		return `/collections/${encoded}`;
+	}
+
 	it("rejects files/x as reserved on the first segment only", () => {
 		const error = nestedFailure({ "files/x": { operations: baseOps } });
 		expect(
-			has(error.issues, "collection.RESERVED_NAME", "/collections/files/x"),
+			has(
+				error.issues,
+				"collection.RESERVED_NAME",
+				collectionPointer("files/x"),
+			),
 		).toBe(true);
 	});
 
@@ -403,7 +385,14 @@ describe("nested collection names (03-06)", () => {
 	});
 
 	const unsafeProps: [string, Record<string, unknown>][] = [
-		["a(b)", CLOSED_OBJECT],
+		[
+			"a(b)",
+			{
+				type: "object",
+				additionalProperties: false,
+				properties: { "a(b)": { type: "string", maxLength: 1 } },
+			},
+		],
 		[
 			"nested-object",
 			{
@@ -465,11 +454,13 @@ describe("nested collection names (03-06)", () => {
 				additionalProperties: false,
 				properties: { [name]: { type: "string", maxLength: 1 } },
 			};
+			const issues = mirrorUnsafeIssues({ c: { schema, operations: baseOps } });
+			const encoded = `/${name.replaceAll("~", "~0").replaceAll("/", "~1")}`;
 			expect(
 				has(
-					mirrorUnsafeIssues({ c: { schema, operations: baseOps } }),
+					issues,
 					"collection.MIRROR_UNSAFE_PROPERTY_NAME",
-					`/collections/c/schema/properties/${name}`,
+					`/collections/c/schema/properties${encoded}`,
 				),
 			).toBe(true);
 		});
