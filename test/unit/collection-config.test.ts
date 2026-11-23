@@ -492,3 +492,69 @@ describe("nested collection names (03-06)", () => {
 		).not.toThrow();
 	});
 });
+
+describe("operator mirror grants (03-07)", () => {
+	const HASH =
+		"0000000000000000000000000000000000000000000000000000000000000000";
+	const baseOps = { create: "anonymous", get: "apiKey" };
+
+	function collectionPointer(name: string): string {
+		const encoded = name.replaceAll("~", "~0").replaceAll("/", "~1");
+		return `/collections/${encoded}`;
+	}
+
+	it("accepts mirror:status and mirror:rebuild on a key", () => {
+		const config = loadNestedYaml({ contact: { operations: baseOps } }, [
+			{
+				name: "ops",
+				hash: HASH,
+				grants: ["mirror:status", "mirror:rebuild", "contact:get"],
+			},
+		]);
+		expect(config.apiKeys[0]?.grants).toEqual(
+			expect.arrayContaining(["mirror:status", "mirror:rebuild"]),
+		);
+	});
+
+	for (const grant of ["mirror:delete", "mirror:create"] as const) {
+		it(`rejects ${grant} with UNKNOWN_GRANT`, () => {
+			const error = nestedFailure({ contact: { operations: baseOps } }, [
+				{ name: "k", hash: HASH, grants: [grant] },
+			]);
+			expect(
+				has(error.issues, "apiKey.UNKNOWN_GRANT", "/apiKeys/0/grants/0"),
+			).toBe(true);
+		});
+	}
+
+	it("rejects mirror: as INVALID_GRANT", () => {
+		const error = nestedFailure({ contact: { operations: baseOps } }, [
+			{ name: "k", hash: HASH, grants: ["mirror:"] },
+		]);
+		expect(
+			has(error.issues, "apiKey.INVALID_GRANT", "/apiKeys/0/grants/0"),
+		).toBe(true);
+	});
+
+	it("rejects a collection named mirror", () => {
+		const error = nestedFailure({ mirror: { operations: baseOps } });
+		expect(
+			has(
+				error.issues,
+				"collection.RESERVED_NAME",
+				collectionPointer("mirror"),
+			),
+		).toBe(true);
+	});
+
+	it("rejects mirror/x as reserved on the first segment", () => {
+		const error = nestedFailure({ "mirror/x": { operations: baseOps } });
+		expect(
+			has(
+				error.issues,
+				"collection.RESERVED_NAME",
+				collectionPointer("mirror/x"),
+			),
+		).toBe(true);
+	});
+});
