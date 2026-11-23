@@ -219,8 +219,24 @@ describe("mirror reconcile and failure recovery", () => {
 			});
 			expect(res.status).toBe(201);
 			await waitUntil(
-				async () =>
-					(await fetchMirror(app.mirrorFolder, "contact.xlsx")) !== null,
+				async () => {
+					const s = await app.db
+						.collection<{
+							_id: string;
+							dirtySeq?: number;
+							mirroredSeq?: number;
+							contentHash?: string;
+						}>("mirror_state")
+						.findOne({ _id: "contact" });
+					const bytes = await fetchMirror(app.mirrorFolder, "contact.xlsx");
+					return (
+						bytes !== null &&
+						s?.contentHash !== undefined &&
+						s.dirtySeq !== undefined &&
+						s.mirroredSeq !== undefined &&
+						s.mirroredSeq >= s.dirtySeq
+					);
+				},
 				8000,
 				50,
 			);

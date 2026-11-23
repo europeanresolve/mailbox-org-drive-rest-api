@@ -159,18 +159,34 @@ export class MirrorWorker {
 
 			const storedHash = current.contentHash;
 			const lastEtag = current.lastWrittenEtag;
-			const skip =
+			let skip =
 				storedHash === contentHash &&
 				fileExists &&
 				fileEtag === lastEtag &&
 				lastEtag != null;
+			let contentDrift = false;
+			if (skip && seq > (current.mirroredSeq ?? 0)) {
+				try {
+					const onDisk = await this.#mount.read(rel);
+					const isZip =
+						onDisk.length >= 2 && onDisk[0] === 0x50 && onDisk[1] === 0x4b;
+					if (!isZip) {
+						skip = false;
+						contentDrift = true;
+					}
+				} catch {
+					skip = false;
+					contentDrift = true;
+				}
+			}
 
 			const external =
-				fileExists &&
-				(lastEtag === null ||
-					lastEtag === undefined ||
-					fileEtag !== lastEtag ||
-					fileEtag === null);
+				contentDrift ||
+				(fileExists &&
+					(lastEtag === null ||
+						lastEtag === undefined ||
+						fileEtag !== lastEtag ||
+						fileEtag === null));
 
 			if (!leaseLive) return;
 

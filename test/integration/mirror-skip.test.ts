@@ -28,7 +28,12 @@ const contactCollection = {
 	},
 } as const;
 
-const mirrorTimings = { pollMs: 50, debounceMs: 100, leaseTtlMs: 5_000 };
+const mirrorTimings = {
+	pollMs: 50,
+	debounceMs: 100,
+	leaseTtlMs: 5_000,
+	reconcileMs: 3_600_000,
+};
 
 async function bumpDirty(db: Db): Promise<void> {
 	await db
@@ -140,6 +145,14 @@ describe("mirror content-hash skip and external overwrite", () => {
 			const folder = app.mirrorFolder;
 			await waitMirrored(app.db, 1);
 			await putMirrorRaw(folder, "contact.xlsx", Buffer.from("staff edit"));
+			await waitUntil(
+				async () => {
+					const bytes = await fetchMirror(folder, "contact.xlsx");
+					return bytes !== null && bytes.length < 64;
+				},
+				3000,
+				50,
+			);
 			await bumpDirty(app.db);
 			await waitMirrored(app.db, 2);
 
@@ -148,15 +161,23 @@ describe("mirror content-hash skip and external overwrite", () => {
 			const { rows } = await readRows(bytes as Buffer);
 			expect(rows[1]?.[1]).toBe("ext@example.invalid");
 
-			const state = await app.db
-				.collection<{
-					_id: string;
-					externalChangeAt?: Date;
-					externalChanges?: number;
-				}>("mirror_state")
-				.findOne({ _id: "contact" });
-			expect(state?.externalChangeAt).toBeInstanceOf(Date);
-			expect(state?.externalChanges).toBe(1);
+			await waitUntil(
+				async () => {
+					const state = await app.db
+						.collection<{
+							_id: string;
+							externalChangeAt?: Date;
+							externalChanges?: number;
+						}>("mirror_state")
+						.findOne({ _id: "contact" });
+					return (
+						state?.externalChangeAt instanceof Date &&
+						state.externalChanges === 1
+					);
+				},
+				15_000,
+				50,
+			);
 
 			const logText = app.logs.lines().join("\n");
 			expect(logText).toContain("mirror replaced an external change");
