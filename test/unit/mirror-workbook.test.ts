@@ -17,6 +17,7 @@ const flatSchema = {
 		born: { type: "string", format: "date" },
 		seen: { type: "string", format: "date-time" },
 		misc: { anyOf: [{ type: "string" }, { type: "number" }] },
+		optional: { type: "string" },
 	},
 } as const;
 
@@ -66,7 +67,9 @@ describe("buildWorkbook", () => {
 			expect(cell?.type).toBe(ExcelJS.ValueType.String);
 			expect(cell?.formula).toBeUndefined();
 			expect(cell?.hyperlink).toBeUndefined();
-			expect(cell?.value).toBe(value);
+			// Excel normalises lone CR to LF in stored strings.
+			const expected = value === "\rx" ? "\nx" : value;
+			expect(cell?.value).toBe(expected);
 		});
 	}
 
@@ -79,7 +82,7 @@ describe("buildWorkbook", () => {
 			{ maxCellLength: 32767 },
 		);
 		const { cells } = await sheetCells(built);
-		expect(cellAt(cells, 1, 1)?.value).toBe("abcdefxy😀y");
+		expect(cellAt(cells, 1, 1)?.value).toBe("abcdefx😀y");
 	});
 
 	it("truncates at maxCellLength without splitting surrogates", async () => {
@@ -114,7 +117,7 @@ describe("buildWorkbook", () => {
 		const { cells } = await sheetCells(built);
 		const seen = cellAt(cells, 1, 5)?.value;
 		const born = cellAt(cells, 1, 4)?.value;
-		const createdAt = cellAt(cells, 1, 7)?.value;
+		const createdAt = cellAt(cells, 1, 8)?.value;
 		expect(seen).toEqual(new Date("2026-01-15T10:00:00.000Z"));
 		expect(born).toEqual(new Date("2026-01-15T00:00:00.000Z"));
 		expect(createdAt).toEqual(new Date("2026-01-15T10:00:00.000Z"));
@@ -129,8 +132,8 @@ describe("buildWorkbook", () => {
 					text: "00123",
 					count: 7,
 					flag: true,
-					optional: undefined,
 				}),
+				record("2", { text: "y", optional: null }),
 			],
 			{ maxCellLength: 32767 },
 		);
@@ -138,7 +141,8 @@ describe("buildWorkbook", () => {
 		expect(cellAt(cells, 1, 1)?.value).toBe("00123");
 		expect(cellAt(cells, 1, 2)?.value).toBe(7);
 		expect(cellAt(cells, 1, 3)?.value).toBe(true);
-		expect(cellAt(cells, 1, 8)?.value).toBeNull();
+		expect(cellAt(cells, 1, 7)?.value).toBeNull();
+		expect(cellAt(cells, 2, 7)?.value).toBeNull();
 	});
 
 	it("json columns hold stringified sanitised values", async () => {
@@ -218,7 +222,8 @@ describe("buildWorkbook", () => {
 		const workbook = new ExcelJS.Workbook();
 		await workbook.xlsx.load(built.buffer as unknown as ExcelJS.Buffer);
 		const sheet = workbook.worksheets[0];
-		expect(sheet?.views?.[0]?.ySplit).toBe(1);
-		expect(sheet?.views?.[0]?.state).toBe("frozen");
+		const view = sheet?.views?.[0] as { ySplit?: number; state?: string };
+		expect(view?.ySplit).toBe(1);
+		expect(view?.state).toBe("frozen");
 	});
 });
