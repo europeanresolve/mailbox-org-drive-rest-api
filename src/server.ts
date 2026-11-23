@@ -100,6 +100,7 @@ export async function start(
 			}
 			worker = new MirrorWorker({
 				config,
+				db,
 				mount: mount as WritableMount,
 				state: mirrorState as MirrorStateStore,
 				store: new RecordStore(db),

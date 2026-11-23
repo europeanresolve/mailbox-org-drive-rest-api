@@ -5,7 +5,7 @@ import type { Config } from "../config/schema.ts";
 import { type Column, planColumns } from "./columns.ts";
 import { mirrorSheetName } from "./path.ts";
 
-export type WorkbookNotes = { truncatedCells: number };
+export type WorkbookNotes = { truncatedCells: number; omittedSheets: number };
 
 export const MIRROR_FORMAT_VERSION = 1;
 

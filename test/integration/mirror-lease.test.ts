@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { MongoClient, type Db } from "mongodb";
 import { describe, expect, it, inject } from "vitest";
 import { MirrorLease } from "../../src/mirror/lease.ts";
@@ -24,6 +23,12 @@ const contactCollection = {
 		rateLimit: { max: 10_000, windowSeconds: 60 },
 	},
 } as const;
+
+let dbCounter = 0;
+
+function leaseDbName(runId: string, tag: string): string {
+	return `it-${runId}-l${tag}${dbCounter++}`;
+}
 
 async function withDb<T>(dbName: string, fn: (db: Db) => Promise<T>): Promise<T> {
 	const uri = `${STACK.mongoUri}/${dbName}`;
@@ -83,7 +88,7 @@ function passIntervals(lines: string[], collection: string): PassInterval[] {
 describe("mirror lease and fencing", () => {
 	it("lease race: exactly one of 20 concurrent acquires succeeds", async () => {
 		const runId = inject("runId");
-		const dbName = `it-${runId}-lease-race-${randomUUID()}`;
+		const dbName = leaseDbName(runId, "r");
 		await withDb(dbName, async (db) => {
 			const a = new MirrorLease({ db, ttlMs: 5_000 });
 			const b = new MirrorLease({ db, ttlMs: 5_000 });
@@ -99,7 +104,7 @@ describe("mirror lease and fencing", () => {
 
 	it("takeover: expired lease lets another owner acquire with a higher token", async () => {
 		const runId = inject("runId");
-		const dbName = `it-${runId}-lease-take-${randomUUID()}`;
+		const dbName = leaseDbName(runId, "t");
 		await withDb(dbName, async (db) => {
 			const a = new MirrorLease({ db, ttlMs: 200 });
 			const b = new MirrorLease({ db, ttlMs: 200 });
@@ -115,7 +120,7 @@ describe("mirror lease and fencing", () => {
 
 	it("release: next owner acquires immediately with token + 1", async () => {
 		const runId = inject("runId");
-		const dbName = `it-${runId}-lease-rel-${randomUUID()}`;
+		const dbName = leaseDbName(runId, "e");
 		await withDb(dbName, async (db) => {
 			const a = new MirrorLease({ db, ttlMs: 5_000 });
 			const b = new MirrorLease({ db, ttlMs: 5_000 });
@@ -130,7 +135,7 @@ describe("mirror lease and fencing", () => {
 
 	it("fencing: stale token commit is rejected", async () => {
 		const runId = inject("runId");
-		const dbName = `it-${runId}-lease-fence-${randomUUID()}`;
+		const dbName = leaseDbName(runId, "f");
 		await withDb(dbName, async (db) => {
 			const timings = resolveTimings({
 				mount: "live",
@@ -175,7 +180,7 @@ describe("mirror lease and fencing", () => {
 
 	it("two instances never overlap mirror passes for one collection", async () => {
 		const runId = inject("runId");
-		const dbName = `it-${runId}-lease-2inst-${randomUUID()}`;
+		const dbName = leaseDbName(runId, "2");
 		const mirrorTimings = { pollMs: 25, debounceMs: 50, leaseTtlMs: 2_000 };
 		const appA = await collectionsApp({
 			role: "all",

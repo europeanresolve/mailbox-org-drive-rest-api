@@ -6,9 +6,12 @@ export type MirrorState = {
 	dirtySeq: number;
 	mirroredSeq: number;
 	dueAt: Date;
+	fence?: number;
 	lastMirroredAt?: Date;
 	contentHash?: string;
 	lastWrittenEtag?: string | null;
+	externalChangeAt?: Date;
+	externalChanges?: number;
 };
 
 export class MirrorStateStore {
@@ -38,24 +41,51 @@ export class MirrorStateStore {
 		return this.#collection.find({ _id: { $in: [...names] } }).toArray();
 	}
 
-	async commit(
-		name: string,
-		fields: {
-			seq: number;
-			contentHash: string;
-			lastWrittenEtag: string | null;
-		},
-	): Promise<void> {
+	async read(name: string): Promise<MirrorState | null> {
+		return this.#collection.findOne({ _id: name });
+	}
+
+	async fence(name: string, token: number): Promise<void> {
 		await this.#collection.updateOne(
 			{ _id: name },
-			{
-				$set: {
-					mirroredSeq: fields.seq,
-					contentHash: fields.contentHash,
-					lastWrittenEtag: fields.lastWrittenEtag,
-					lastMirroredAt: new Date(),
-				},
-			},
+			{ $max: { fence: token } },
+			{ upsert: true },
 		);
+	}
+
+	async commit(
+		name: string,
+		token: number,
+		fields: {
+			seq: number;
+			contentHash?: string;
+			lastWrittenEtag?: string | null;
+			lastMirroredAt?: Date;
+			externalChangeAt?: Date;
+			incExternalChanges?: boolean;
+		},
+	): Promise<boolean> {
+		const set: Record<string, unknown> = { mirroredSeq: fields.seq };
+		if (fields.contentHash !== undefined) set.contentHash = fields.contentHash;
+		if (fields.lastWrittenEtag !== undefined) {
+			set.lastWrittenEtag = fields.lastWrittenEtag;
+		}
+		if (fields.lastMirroredAt !== undefined) {
+			set.lastMirroredAt = fields.lastMirroredAt;
+		} else {
+			set.lastMirroredAt = new Date();
+		}
+		if (fields.externalChangeAt !== undefined) {
+			set.externalChangeAt = fields.externalChangeAt;
+		}
+		const update: Record<string, unknown> = { $set: set };
+		if (fields.incExternalChanges === true) {
+			update.$inc = { externalChanges: 1 };
+		}
+		const result = await this.#collection.updateOne(
+			{ _id: name, fence: token },
+			update,
+		);
+		return result.matchedCount === 1;
 	}
 }
